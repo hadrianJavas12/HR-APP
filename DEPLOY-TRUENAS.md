@@ -1,9 +1,14 @@
 # 🚀 Panduan Deploy HR Man-Hour Monitoring System
 
 **Target Server:** TrueNAS Scale  
-**Port Aplikasi:** 8888  
-**Domain:** eleva.hadrianjg.web.id  
 **CDN/Proxy:** Cloudflare  
+
+| Service    | Subdomain                          | Port |
+|------------|-------------------------------------|------|
+| Frontend   | `eleva.hadrianjg.web.id`            | 8888 |
+| Backend API| `eleva-api.hadrianjg.web.id`        | 3001 |
+| PostgreSQL | `eleva-postgress.hadrianjg.web.id`  | 5432 |
+| Redis      | `eleva-redis.hadrianjg.web.id`      | 6379 |
 
 ---
 
@@ -154,20 +159,31 @@ SMTP_FROM=noreply@hadrianjg.web.id
 
 ### 4.2 Routing Frontend → Backend
 
-Routing sudah dikonfigurasi otomatis:
+Routing sudah dikonfigurasi otomatis dengan **subdomain terpisah**:
 
-- **Frontend** menggunakan path relatif `/api/v1` (tidak ada hardcoded URL)
-- **Nginx** di container frontend mem-proxy `/api/*` ke `backend:3000` secara internal
-- **Backend** CORS sudah diset ke `https://eleva.hadrianjg.web.id` via `docker-compose.prod.yml`
-- **Express** trust-proxy sudah aktif di production mode (untuk mendukung Cloudflare)
+- **Frontend** (`eleva.hadrianjg.web.id`) → port 8888
+  - Memanggil API via `https://eleva-api.hadrianjg.web.id/api/v1` (hardcoded saat build)
+- **Backend API** (`eleva-api.hadrianjg.web.id`) → port 3001
+  - CORS mengizinkan origin dari `https://eleva.hadrianjg.web.id`
+  - Socket.IO juga mengarah ke subdomain API
+- **PostgreSQL** (`eleva-postgress.hadrianjg.web.id`) → port 5432 (DNS-only, tidak melalui Cloudflare proxy)
+- **Redis** (`eleva-redis.hadrianjg.web.id`) → port 6379 (DNS-only, tidak melalui Cloudflare proxy)
 
 ```
 Browser → https://eleva.hadrianjg.web.id
-    → Cloudflare (SSL termination)
-        → Router port forward :8888
-            → Nginx (hr-frontend container)
-                → /api/* → proxy ke hr-backend:3000
-                → /* → serve Vue SPA
+    → Cloudflare (SSL) → Origin Rule port 8888
+        → Nginx (hr-frontend container)
+            → Serve Vue SPA
+
+Vue SPA → https://eleva-api.hadrianjg.web.id/api/v1/*
+    → Cloudflare (SSL) → Origin Rule port 3001
+        → Express (hr-backend container :3000)
+
+DBA Tools → eleva-postgress.hadrianjg.web.id:5432  (DNS-only)
+    → Langsung ke TrueNAS → PostgreSQL container
+
+Redis CLI → eleva-redis.hadrianjg.web.id:6379  (DNS-only)
+    → Langsung ke TrueNAS → Redis container
 ```
 
 **Tidak perlu mengubah file apapun.** Tinggal build dan deploy.
@@ -194,69 +210,59 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 ### 5.3 Cek Status Container
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml --env-file .env.production ps
 ```
 
 Output yang diharapkan:
 
 ```
 NAME           STATUS                 PORTS
-hr-postgres    Up (healthy)           5432/tcp
-hr-redis       Up (healthy)           6379/tcp
-hr-backend     Up                     3000/tcp
+hr-postgres    Up (healthy)           0.0.0.0:5432->5432/tcp
+hr-redis       Up (healthy)           0.0.0.0:6379->6379/tcp
+hr-backend     Up                     0.0.0.0:3001->3000/tcp
 hr-frontend    Up                     0.0.0.0:8888->80/tcp
 ```
 
-> ✅ Hanya port **8888** yang terbuka ke luar. PostgreSQL dan Redis hanya bisa diakses antar container.
+> ✅ Port **8888** (frontend), **3001** (backend API), **5432** (PostgreSQL), **6379** (Redis) terbuka.
 
 ### 5.4 Cek Logs
 
 ```bash
 # Lihat semua logs
-docker compose -f docker-compose.prod.yml logs -f
+docker compose -f docker-compose.prod.yml --env-file .env.production logs -f
 
 # Hanya backend
-docker compose -f docker-compose.prod.yml logs -f backend
+docker compose -f docker-compose.prod.yml --env-file .env.production logs -f backend
 
 # Hanya frontend
-docker compose -f docker-compose.prod.yml logs -f frontend
+docker compose -f docker-compose.prod.yml --env-file .env.production logs -f frontend
 ```
 
 ---
 
-## 6. Migrasi & Seed Database
+## 6. Seed Database (Opsional)
 
-### 6.1 Jalankan Migrasi Schema
+Migrasi database **otomatis dijalankan** saat backend pertama kali start. Tidak perlu command manual.
 
-```bash
-docker compose -f docker-compose.prod.yml exec backend node -e "
-  import knex from 'knex';
-  import knexConfig from './src/config/knexfile.js';
-  const db = knex(knexConfig);
-  await db.migrate.latest();
-  console.log('✅ Migrations completed');
-  await db.destroy();
-"
+Log backend akan menampilkan:
+```
+Database migrations completed
 ```
 
-Atau cara alternatif:
-
-```bash
-docker compose -f docker-compose.prod.yml exec backend npx knex migrate:latest --knexfile src/config/knexfile.js
-```
-
-### 6.2 Jalankan Seed Data Demo (Opsional)
+### 6.1 Jalankan Seed Data Demo (Opsional)
 
 > ⚠️ **Hanya jalankan ini untuk pertama kali** atau jika ingin data demo. Jangan jalankan di production yang sudah ada data real.
 
 ```bash
-docker compose -f docker-compose.prod.yml exec backend npx knex seed:run --knexfile src/config/knexfile.js
+docker compose -f docker-compose.prod.yml --env-file .env.production exec backend \
+  npx knex seed:run --knexfile src/config/knexfile.js
 ```
 
-### 6.3 Verifikasi Database
+### 6.2 Verifikasi Database
 
 ```bash
-docker compose -f docker-compose.prod.yml exec postgres psql -U hr_admin -d hr_manhour -c "\dt"
+docker compose -f docker-compose.prod.yml --env-file .env.production exec postgres \
+  psql -U eleva-admin -d eleva-db -c "\dt"
 ```
 
 Seharusnya menampilkan tabel: `users`, `employees`, `projects`, `allocations`, `timesheets`, `audit_logs`, `tasks`, dll.
@@ -268,27 +274,31 @@ Seharusnya menampilkan tabel: `users`, `employees`, `projects`, `allocations`, `
 ### 7.1 Arsitektur Jaringan
 
 ```
-Internet → Cloudflare (SSL) → eleva.hadrianjg.web.id
-                                    ↓
-                            IP TrueNAS:8888
-                                    ↓
-                            Nginx (frontend container)
-                                ↓           ↓
-                            Vue SPA      /api/ → Backend:3000
+Internet → Cloudflare (SSL)
+    ├─ eleva.hadrianjg.web.id          → IP:8888  → Nginx (Frontend)
+    ├─ eleva-api.hadrianjg.web.id      → IP:3001  → Express (Backend)
+    ├─ eleva-postgress.hadrianjg.web.id → IP:5432  → PostgreSQL (DNS-only)
+    └─ eleva-redis.hadrianjg.web.id    → IP:6379  → Redis (DNS-only)
 ```
 
-### 7.2 Tambahkan DNS Record
+### 7.2 Tambahkan DNS Records
 
 1. Login ke [Cloudflare Dashboard](https://dash.cloudflare.com)
 2. Pilih domain **hadrianjg.web.id**
 3. Buka **DNS → Records → Add Record**
 
-| Type | Name    | Content (Value)       | Proxy Status | TTL  |
-|------|---------|-----------------------|-------------|------|
-| A    | eleva   | `<IP_PUBLIC_TRUENAS>` | ✅ Proxied   | Auto |
+| Type | Name              | Content (Value)       | Proxy Status    | TTL  |
+|------|-------------------|-----------------------|-----------------|------|
+| A    | `eleva`           | `<IP_PUBLIC_TRUENAS>` | ✅ Proxied       | Auto |
+| A    | `eleva-api`       | `<IP_PUBLIC_TRUENAS>` | ✅ Proxied       | Auto |
+| A    | `eleva-postgress` | `<IP_PUBLIC_TRUENAS>` | ⚠️ DNS only     | Auto |
+| A    | `eleva-redis`     | `<IP_PUBLIC_TRUENAS>` | ⚠️ DNS only     | Auto |
 
-> 💡 **IP_PUBLIC_TRUENAS** = IP publik jaringan tempat TrueNAS berada.  
+> 💡 **IP_PUBLIC_TRUENAS** = IP publik jaringan tempat TrueNAS berada.
 > Cek IP publik dari server: `curl -4 ifconfig.me`
+
+> ⚠️ **PostgreSQL & Redis harus DNS-only** (awan abu-abu) karena Cloudflare hanya bisa proxy HTTP/HTTPS.
+> Pastikan keduanya diamankan dengan password yang kuat (sudah dikonfigurasi).
 
 ### 7.3 Konfigurasi SSL/TLS
 
@@ -298,11 +308,11 @@ Internet → Cloudflare (SSL) → eleva.hadrianjg.web.id
    ```
    ┌──────────────┐     HTTPS      ┌───────────┐    HTTP     ┌──────────┐
    │   Browser    │ ──────────────→ │ Cloudflare │ ─────────→ │ TrueNAS  │
-   │              │    (SSL/TLS)    │   Proxy    │  (Port 8888)│  :8888   │
+   │              │    (SSL/TLS)    │   Proxy    │             │          │
    └──────────────┘                 └───────────┘             └──────────┘
    ```
 
-   > Cloudflare menangani SSL certificate (gratis). Koneksi ke server menggunakan HTTP biasa (port 8888).
+   > Berlaku untuk `eleva` dan `eleva-api`. PostgreSQL & Redis menggunakan DNS-only (tidak melalui SSL Cloudflare).
 
 ### 7.4 Konfigurasi Port Forwarding (Router)
 
@@ -310,30 +320,44 @@ Karena TrueNAS biasanya berada di jaringan lokal, perlu **port forwarding** di r
 
 1. Login ke router (biasanya `192.168.1.1`)
 2. Buka menu **Port Forwarding / NAT / Virtual Server**
-3. Tambahkan rule:
+3. Tambahkan rules:
 
-| Nama       | Protocol | External Port | Internal IP         | Internal Port |
-|------------|----------|---------------|---------------------|---------------|
-| HR-Eleva   | TCP      | 8888          | `<IP_LOKAL_TRUENAS>` | 8888          |
+| Nama             | Protocol | External Port | Internal IP         | Internal Port |
+|------------------|----------|---------------|---------------------|---------------|
+| HR-Frontend      | TCP      | 8888          | `<IP_LOKAL_TRUENAS>` | 8888          |
+| HR-Backend-API   | TCP      | 3001          | `<IP_LOKAL_TRUENAS>` | 3001          |
+| HR-PostgreSQL    | TCP      | 5432          | `<IP_LOKAL_TRUENAS>` | 5432          |
+| HR-Redis         | TCP      | 6379          | `<IP_LOKAL_TRUENAS>` | 6379          |
 
 > 💡 Cek IP lokal TrueNAS: `hostname -I` atau lihat dari Web UI TrueNAS → **Network**
+> 
+> ⚠️ **Catatan keamanan:** Port 5432 dan 6379 terbuka ke internet. Pastikan password kuat sudah diset
+> (sudah dikonfigurasi di `.env.production`). Pertimbangkan menggunakan firewall rules untuk
+> membatasi akses hanya dari IP tertentu.
 
-### 7.5 Cloudflare Origin Rules (Port 8888)
+### 7.5 Cloudflare Origin Rules (Port Mapping)
 
-Karena Cloudflare secara default mengarahkan ke port 80/443, kita perlu **Origin Rule** untuk mengarahkan ke port 8888:
+Karena Cloudflare secara default mengarahkan ke port 80/443, kita perlu **Origin Rules** untuk setiap subdomain:
 
 1. Buka **Rules → Origin Rules → Create Rule**
-2. Konfigurasi:
 
-   - **Rule Name:** `HR App Port 8888`
-   - **When incoming requests match:**
-     - Field: `Hostname`
-     - Operator: `equals`
-     - Value: `eleva.hadrianjg.web.id`
-   - **Then:**
-     - **Destination Port:** Override → `8888`
+#### Rule 1: Frontend (port 8888)
 
-3. Klik **Deploy**
+- **Rule Name:** `HR Frontend Port 8888`
+- **When incoming requests match:**
+  - Field: `Hostname` → Operator: `equals` → Value: `eleva.hadrianjg.web.id`
+- **Then:** Destination Port → Override → `8888`
+- Klik **Deploy**
+
+#### Rule 2: Backend API (port 3001)
+
+- **Rule Name:** `HR Backend API Port 3001`
+- **When incoming requests match:**
+  - Field: `Hostname` → Operator: `equals` → Value: `eleva-api.hadrianjg.web.id`
+- **Then:** Destination Port → Override → `3001`
+- Klik **Deploy**
+
+> 📝 PostgreSQL dan Redis tidak perlu Origin Rule karena menggunakan DNS-only (koneksi langsung, bukan via Cloudflare proxy).
 
 ### 7.6 Pengaturan Cloudflare Tambahan (Opsional tapi Direkomendasikan)
 
@@ -361,22 +385,31 @@ Karena Cloudflare secara default mengarahkan ke port 80/443, kita perlu **Origin
 ### 8.1 Test dari Server Lokal
 
 ```bash
-# Test dari TrueNAS
+# Test Frontend
 curl http://localhost:8888
 # Seharusnya menampilkan HTML dari Vue app
 
-curl http://localhost:8888/api/v1/health
+# Test Backend API (langsung via port 3001)
+curl http://localhost:3001/api/v1/health
 # Seharusnya menampilkan: {"status":"ok",...}
 
 # Test CORS header
-curl -I -H "Origin: https://eleva.hadrianjg.web.id" http://localhost:8888/api/v1/health
+curl -I -H "Origin: https://eleva.hadrianjg.web.id" http://localhost:3001/api/v1/health
 # Seharusnya ada header: access-control-allow-origin: https://eleva.hadrianjg.web.id
+
+# Test PostgreSQL
+docker compose -f docker-compose.prod.yml --env-file .env.production exec postgres \
+  psql -U eleva-admin -d eleva-db -c "SELECT 1"
+
+# Test Redis
+docker compose -f docker-compose.prod.yml --env-file .env.production exec redis \
+  redis-cli -a ZiUdDIF6Q77o03L1n53a5Bwyrx0G+h3V ping
 ```
 
 ### 8.2 Test dari Browser
 
-1. Buka: **https://eleva.hadrianjg.web.id**
-2. Seharusnya muncul halaman Login
+1. Buka: **https://eleva.hadrianjg.web.id** → Halaman Login
+2. Buka: **https://eleva-api.hadrianjg.web.id/api/v1/health** → JSON status
 3. Login dengan akun demo (jika sudah seed):
    - **Super Admin:** `admin@demo.com` / `password123`
    - **HR Admin:** `hr@demo.com` / `password123`
@@ -390,8 +423,10 @@ curl -I -H "Origin: https://eleva.hadrianjg.web.id" http://localhost:8888/api/v1
 - [ ] Dashboard menampilkan data (admin = company dashboard, employee = personal dashboard)
 - [ ] Menu navigasi dalam Bahasa Indonesia
 - [ ] URL menampilkan `https://` (SSL dari Cloudflare)
-- [ ] API endpoint bekerja: `https://eleva.hadrianjg.web.id/api/v1/health`
-- [ ] WebSocket/Socket.IO terhubung (cek di browser DevTools → Network → WS)
+- [ ] API endpoint bekerja: `https://eleva-api.hadrianjg.web.id/api/v1/health`
+- [ ] WebSocket/Socket.IO terhubung ke `eleva-api.hadrianjg.web.id` (cek di browser DevTools → Network → WS)
+- [ ] PostgreSQL bisa diakses via: `psql -h eleva-postgress.hadrianjg.web.id -U eleva-admin -d eleva-db`
+- [ ] Redis bisa diakses via: `redis-cli -h eleva-redis.hadrianjg.web.id -a <password> ping`
 
 ---
 
@@ -426,13 +461,13 @@ hrdc logs -f
 hrdc exec backend sh
 
 # Masuk ke database
-hrdc exec postgres psql -U hr_admin -d hr_manhour
+hrdc exec postgres psql -U eleva-admin -d eleva-db
 
 # Backup database
-hrdc exec postgres pg_dump -U hr_admin hr_manhour > backup_$(date +%Y%m%d).sql
+hrdc exec postgres pg_dump -U eleva-admin eleva-db > backup_$(date +%Y%m%d).sql
 
 # Restore database
-cat backup_20260225.sql | hrdc exec -T postgres psql -U hr_admin -d hr_manhour
+cat backup_20260225.sql | hrdc exec -T postgres psql -U eleva-admin -d eleva-db
 ```
 
 ### 9.2 Update Aplikasi
@@ -449,8 +484,7 @@ cd /mnt/tank/apps/hr-manhour
 docker compose -f docker-compose.prod.yml --env-file .env.production build --no-cache backend frontend
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 
-# Jalankan migrasi jika ada perubahan schema
-docker compose -f docker-compose.prod.yml --env-file .env.production exec backend npx knex migrate:latest --knexfile src/config/knexfile.js
+# Migrasi otomatis jalan saat backend start, tidak perlu command manual
 ```
 
 ### 9.3 Auto-Start Setelah Reboot
@@ -469,7 +503,7 @@ Buat cron job di TrueNAS untuk backup harian:
 | Field     | Value |
 |-----------|-------|
 | Description | HR DB Backup Daily |
-| Command   | `docker compose -f /mnt/tank/apps/hr-manhour/docker-compose.prod.yml exec -T postgres pg_dump -U hr_admin hr_manhour > /mnt/tank/backups/hr-manhour/backup_$(date +\%Y\%m\%d).sql` |
+| Command   | `docker compose -f /mnt/tank/apps/hr-manhour/docker-compose.prod.yml --env-file /mnt/tank/apps/hr-manhour/.env.production exec -T postgres pg_dump -U eleva-admin eleva-db > /mnt/tank/backups/hr-manhour/backup_$(date +\%Y\%m\%d).sql` |
 | Run As User | root |
 | Schedule  | Daily at 02:00 AM |
 
@@ -528,22 +562,140 @@ tar -xzf hr-manhour.tar.gz && rm hr-manhour.tar.gz
 docker compose -f docker-compose.prod.yml --env-file .env.production build --no-cache
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 
-# 6. Migrasi database
-docker compose -f docker-compose.prod.yml --env-file .env.production exec backend \
-  npx knex migrate:latest --knexfile src/config/knexfile.js
+# 6. Migrasi otomatis saat backend start, cek logs:
+docker compose -f docker-compose.prod.yml --env-file .env.production logs -f backend
 
 # 7. Seed data demo (opsional, hanya pertama kali)
 docker compose -f docker-compose.prod.yml --env-file .env.production exec backend \
   npx knex seed:run --knexfile src/config/knexfile.js
 
 # 8. Verifikasi
-curl http://localhost:8888/api/v1/health
+curl http://localhost:3001/api/v1/health
+curl http://localhost:8888
 
-# 9. Setup Cloudflare DNS (A record: eleva → IP publik)
-# 10. Setup Cloudflare Origin Rule (port 8888)
+# 9. Setup Cloudflare DNS:
+#    A record: eleva     → IP publik (Proxied)
+#    A record: eleva-api → IP publik (Proxied)
+#    A record: eleva-postgress → IP publik (DNS only)
+#    A record: eleva-redis     → IP publik (DNS only)
+# 10. Setup Cloudflare Origin Rules:
+#    eleva.hadrianjg.web.id     → port 8888
+#    eleva-api.hadrianjg.web.id → port 3001
 # 11. Buka https://eleva.hadrianjg.web.id ✅
 ```
 
 ---
 
 **Selesai!** Aplikasi HR Man-Hour Monitoring System sekarang live di **https://eleva.hadrianjg.web.id** 🎉
+
+---
+
+## 10. Deploy via TrueNAS Custom App (YAML)
+
+Jika ingin menggunakan fitur **Custom App** di TrueNAS agar container dikelola langsung oleh TrueNAS (auto-start, monitoring via UI), ikuti langkah berikut:
+
+### 10.1 Prasyarat
+
+1. **TrueNAS Scale 24.04 (Dragonfish)** atau lebih baru — mendukung Docker Compose via Custom App
+2. Image sudah di-build dan di-push ke registry (lihat bagian 10.2), **ATAU** build manual di server lalu gunakan image lokal
+3. Pool sudah dipilih di **Apps → Settings → Choose Pool**
+
+### 10.2 Build & Push Image ke Registry (Jika pakai registry)
+
+Jika menggunakan Docker Hub atau registry privat:
+
+```bash
+cd /mnt/tank/apps/hr-manhour
+
+# Login ke Docker Hub (atau registry lain)
+docker login
+
+# Build dengan tag
+docker build -t USERNAME/hr-backend:latest --target production ./backend
+docker build -t USERNAME/hr-frontend:latest --target production ./frontend
+
+# Push
+docker push USERNAME/hr-backend:latest
+docker push USERNAME/hr-frontend:latest
+```
+
+> Ganti `USERNAME` dengan username Docker Hub Anda.
+
+### 10.3 Install via Custom App (Docker Compose)
+
+**TrueNAS Scale 24.04+** mendukung langsung Docker Compose:
+
+1. Buka **Apps → Discover → Custom App** (klik tombol `Custom App`)
+2. Pilih **Docker Compose**
+3. **Compose File Path:** `/mnt/tank/apps/hr-manhour/docker-compose.prod.yml`
+4. **Environment File Path:** `/mnt/tank/apps/hr-manhour/.env.production`
+5. Nama Aplikasi: `hr-manhour`
+6. Klik **Install**
+
+TrueNAS akan membaca docker-compose.prod.yml dan menjalankan semua service secara otomatis.
+
+### 10.4 Alternatif: Custom App (Manual Config per Container)
+
+Jika TrueNAS Anda versi lama (sebelum 24.04) yang belum mendukung Docker Compose, Anda perlu membuat **4 Custom App** terpisah:
+
+#### App 1: PostgreSQL
+
+| Field | Value |
+|-------|-------|
+| Application Name | hr-postgres |
+| Image Repository | postgres |
+| Image Tag | 16-alpine |
+| Container Env Variables | `POSTGRES_DB=eleva-db`, `POSTGRES_USER=eleva-admin`, `POSTGRES_PASSWORD=8iWEnU8mMejzcg2cF+AEO+NhM7HhCiXekjb7RfLwukg=` |
+| Storage | Host Path Mount: `/mnt/tank/apps/hr-data/pgdata` → `/var/lib/postgresql/data` |
+| Networking | Biarkan ClusterIP, port 5432 |
+
+#### App 2: Redis
+
+| Field | Value |
+|-------|-------|
+| Application Name | hr-redis |
+| Image Repository | redis |
+| Image Tag | 7-alpine |
+| Container Args | `redis-server`, `--appendonly`, `yes`, `--requirepass`, `ZiUdDIF6Q77o03L1n53a5Bwyrx0G+h3V` |
+| Storage | Host Path Mount: `/mnt/tank/apps/hr-data/redis` → `/data` |
+| Networking | Biarkan ClusterIP, port 6379 |
+
+#### App 3: Backend
+
+| Field | Value |
+|-------|-------|
+| Application Name | hr-backend |
+| Image Repository | `USERNAME/hr-backend` (atau image lokal) |
+| Image Tag | latest |
+| Container Env Variables | (semua env dari docker-compose.prod.yml backend section) |
+| Networking | Biarkan ClusterIP, port 3000 |
+
+#### App 4: Frontend
+
+| Field | Value |
+|-------|-------|
+| Application Name | hr-frontend |
+| Image Repository | `USERNAME/hr-frontend` (atau image lokal) |
+| Image Tag | latest |
+| Networking | NodePort: **8888** → Container Port **80** |
+
+### 10.5 Rekomendasi: Tetap Gunakan Docker Compose CLI
+
+Untuk kemudahan management, **cara paling reliable** di TrueNAS adalah tetap menggunakan Docker Compose via CLI:
+
+```bash
+# File sudah ada di /mnt/tank/apps/hr-manhour/
+cd /mnt/tank/apps/hr-manhour
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+```
+
+Tambahkan ke **System → Advanced → Init/Shutdown Scripts** agar auto-start:
+
+| Field | Value |
+|-------|-------|
+| Description | Start HR Manhour App |
+| Type | Command |
+| Command | `docker compose -f /mnt/tank/apps/hr-manhour/docker-compose.prod.yml --env-file /mnt/tank/apps/hr-manhour/.env.production up -d` |
+| When | Post Init |
+
+Ini memastikan semua container otomatis start setelah TrueNAS reboot, tanpa perlu setup Custom App satu per satu.

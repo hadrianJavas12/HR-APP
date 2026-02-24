@@ -11,7 +11,9 @@ let socket = null;
 export function connectSocket(token) {
   if (socket?.connected) return socket;
 
-  socket = io(window.location.origin, {
+  const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+
+  socket = io(socketUrl, {
     auth: { token },
     transports: ['websocket', 'polling'],
     reconnection: true,

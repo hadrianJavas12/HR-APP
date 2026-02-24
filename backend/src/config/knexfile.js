@@ -1,4 +1,10 @@
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import config from './index.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const migrationsDir = join(__dirname, '../database/migrations');
+const seedsDir = join(__dirname, '../database/seeds');
 
 /**
  * Knex configuration for all environments.
@@ -16,11 +22,11 @@ const knexConfig = {
     },
     pool: config.db.pool,
     migrations: {
-      directory: '../database/migrations',
+      directory: migrationsDir,
       tableName: 'knex_migrations',
     },
     seeds: {
-      directory: '../database/seeds',
+      directory: seedsDir,
     },
   },
 
@@ -32,15 +38,15 @@ const knexConfig = {
       database: config.db.database,
       user: config.db.user,
       password: config.db.password,
-      ssl: { rejectUnauthorized: false },
+      ...(process.env.DB_SSL === 'true' ? { ssl: { rejectUnauthorized: false } } : {}),
     },
     pool: config.db.pool,
     migrations: {
-      directory: '../database/migrations',
+      directory: migrationsDir,
       tableName: 'knex_migrations',
     },
     seeds: {
-      directory: '../database/seeds',
+      directory: seedsDir,
     },
   },
 
@@ -55,11 +61,11 @@ const knexConfig = {
     },
     pool: { min: 1, max: 5 },
     migrations: {
-      directory: '../database/migrations',
+      directory: migrationsDir,
       tableName: 'knex_migrations',
     },
     seeds: {
-      directory: '../database/seeds',
+      directory: seedsDir,
     },
   },
 };

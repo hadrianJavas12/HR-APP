@@ -12,9 +12,11 @@ let io;
  * @returns {Server}
  */
 export function initSocketIO(httpServer) {
+  const allowedOrigins = [config.frontendUrl, config.appUrl].filter(Boolean);
+
   io = new Server(httpServer, {
     cors: {
-      origin: config.frontendUrl,
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true,
     },

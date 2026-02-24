@@ -23,8 +23,18 @@ export function createApp() {
 
   // ── Security ────────────────────────────────
   app.use(helmet());
+
+  // CORS: allow frontend origin + API own origin
+  const allowedOrigins = [config.frontendUrl, config.appUrl].filter(Boolean);
   app.use(cors({
-    origin: config.frontendUrl,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. curl, mobile apps)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

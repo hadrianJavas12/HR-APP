@@ -4,6 +4,7 @@ import { Project } from '../models/Project.js';
 import { Timesheet } from '../models/Timesheet.js';
 import { Allocation } from '../models/Allocation.js';
 import config from '../config/index.js';
+import logger from '../utils/logger.js';
 
 /**
  * @typedef {Object} UtilizationKPI
@@ -349,6 +350,11 @@ export async function getEmployeeDashboard(tenantId, employeeId, periodStart, pe
  */
 export async function refreshMaterializedViews() {
   const db = getDb();
-  await db.raw('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_employee_utilization');
-  await db.raw('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_project_cost');
+  try {
+    await db.raw('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_employee_utilization');
+    await db.raw('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_project_cost');
+  } catch (err) {
+    // Views may not exist yet if migrations haven't created them
+    logger.warn({ err: err.message }, 'Could not refresh materialized views (may not exist yet)');
+  }
 }

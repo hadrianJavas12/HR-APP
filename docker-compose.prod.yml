@@ -4,6 +4,12 @@
 # ============================================================
 # Usage:
 #   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# Subdomains:
+#   eleva.hadrianjg.web.id        → Frontend  (port 8888)
+#   eleva-api.hadrianjg.web.id    → Backend   (port 3001)
+#   eleva-redis.hadrianjg.web.id  → Redis     (port 6379, DNS-only)
+#   eleva-postgress.hadrianjg.web.id → PostgreSQL (port 5432, DNS-only)
 # ============================================================
 
 services:
@@ -16,6 +22,8 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -32,6 +40,8 @@ services:
     container_name: hr-redis
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -52,7 +62,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      APP_URL: https://eleva.hadrianjg.web.id
+      APP_URL: https://eleva-api.hadrianjg.web.id
       FRONTEND_URL: https://eleva.hadrianjg.web.id
       DB_HOST: postgres
       DB_PORT: 5432
@@ -75,6 +85,8 @@ services:
       SMTP_FROM: ${SMTP_FROM}
       DEFAULT_DAILY_HOURS: 8
       DEFAULT_WEEKLY_CAPACITY: 40
+    ports:
+      - "3001:3000"
     depends_on:
       postgres:
         condition: service_healthy

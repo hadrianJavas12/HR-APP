@@ -10,8 +10,17 @@ import logger from './utils/logger.js';
 async function start() {
   try {
     // Initialize database
-    initDatabase();
+    const db = initDatabase();
     logger.info('Database initialized');
+
+    // Auto-run migrations
+    try {
+      await db.migrate.latest();
+      logger.info('Database migrations completed');
+    } catch (migrationErr) {
+      logger.error({ err: migrationErr }, 'Migration failed');
+      throw migrationErr;
+    }
 
     // Initialize Redis
     initRedis();
