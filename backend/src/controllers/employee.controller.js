@@ -1,4 +1,5 @@
 import * as employeeService from '../services/employee.service.js';
+import { Employee } from '../models/Employee.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 /**
@@ -7,6 +8,17 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 export const list = asyncHandler(async (req, res) => {
   const result = await employeeService.listEmployees(req.tenantId, req.query);
   res.json({ success: true, ...result });
+});
+
+/**
+ * GET /api/v1/employees/me — returns employee linked to current user
+ */
+export const getMyEmployee = asyncHandler(async (req, res) => {
+  const employee = await Employee.query()
+    .where('tenant_id', req.tenantId)
+    .where('user_id', req.user.userId)
+    .first();
+  res.json({ success: true, data: employee || null });
 });
 
 /**

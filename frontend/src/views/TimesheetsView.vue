@@ -320,12 +320,8 @@ async function loadLookups() {
 
 async function resolveMyEmployee() {
   try {
-    const { data } = await api.get('/employees?limit=100');
-    const allEmployees = data.data || [];
-    const userId = authStore.user?.id;
-    if (userId) {
-      myEmployee.value = allEmployees.find(e => e.user_id === userId) || null;
-    }
+    const { data } = await api.get('/employees/me');
+    myEmployee.value = data.data || null;
   } catch (err) {
     console.error('Failed to resolve employee', err);
   }

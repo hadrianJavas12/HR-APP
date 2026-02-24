@@ -79,11 +79,20 @@ const currentDate = computed(() => new Date().toLocaleDateString('en-US', {
 const navItems = computed(() => {
   const items = [
     { path: '/', label: 'Dashboard', icon: '📊' },
-    { path: '/employees', label: 'Employees', icon: '👥' },
-    { path: '/projects', label: 'Projects', icon: '📁' },
-    { path: '/timesheets', label: 'Timesheets', icon: '⏱️' },
-    { path: '/allocations', label: 'Allocations', icon: '📋' },
   ];
+
+  // Employees: only HR and Admin
+  if (authStore.hasRole('super_admin', 'hr_admin')) {
+    items.push({ path: '/employees', label: 'Employees', icon: '👥' });
+  }
+
+  items.push({ path: '/projects', label: 'Projects', icon: '📁' });
+  items.push({ path: '/timesheets', label: 'Timesheets', icon: '⏱️' });
+
+  // Allocations: PM, HR, and Admin
+  if (authStore.hasRole('super_admin', 'hr_admin', 'project_manager')) {
+    items.push({ path: '/allocations', label: 'Allocations', icon: '📋' });
+  }
 
   if (authStore.hasRole('super_admin', 'hr_admin', 'project_manager', 'finance')) {
     items.push({ path: '/reports', label: 'Reports', icon: '📈' });

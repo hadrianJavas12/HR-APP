@@ -169,7 +169,7 @@ export async function getProjectBurnRates(tenantId) {
       .where('t.tenant_id', tenantId)
       .where('t.project_id', proj.id)
       .where('t.approval_status', 'approved')
-      .sum(db.raw('t.hours * e.cost_per_hour as total_cost'))
+      .select(db.raw('COALESCE(SUM(t.hours * e.cost_per_hour), 0) as total_cost'))
       .first();
 
     const actualHours = parseFloat(hoursResult.total || 0);

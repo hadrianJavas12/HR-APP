@@ -5,7 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
  * GET /api/v1/projects
  */
 export const list = asyncHandler(async (req, res) => {
-  const result = await projectService.listProjects(req.tenantId, req.query);
+  const result = await projectService.listProjects(req.tenantId, req.query, req.user);
   res.json({ success: true, ...result });
 });
 

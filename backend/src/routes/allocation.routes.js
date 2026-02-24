@@ -13,8 +13,8 @@ const router = Router();
 
 router.use(authenticate, resolveTenant, requireTenant);
 
-router.get('/', validate(allocationQuerySchema, 'query'), allocCtrl.list);
-router.get('/:id', allocCtrl.getById);
+router.get('/', authorize('super_admin', 'hr_admin', 'project_manager'), validate(allocationQuerySchema, 'query'), allocCtrl.list);
+router.get('/:id', authorize('super_admin', 'hr_admin', 'project_manager'), allocCtrl.getById);
 router.post('/', authorize('super_admin', 'hr_admin', 'project_manager'), validate(createAllocationSchema), allocCtrl.create);
 router.put('/:id', authorize('super_admin', 'hr_admin', 'project_manager'), validate(updateAllocationSchema), allocCtrl.update);
 router.delete('/:id', authorize('super_admin', 'hr_admin', 'project_manager'), allocCtrl.remove);

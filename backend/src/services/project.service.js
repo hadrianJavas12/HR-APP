@@ -1,19 +1,46 @@
 import { Project } from '../models/Project.js';
+import { Employee } from '../models/Employee.js';
+import { Allocation } from '../models/Allocation.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { NotFoundError, ConflictError } from '../utils/errors.js';
 import { paginate } from '../utils/pagination.js';
 
 /**
  * List projects with filters and pagination.
+ * For employee role, only show projects assigned via allocations.
  * @param {string} tenantId
  * @param {Object} query
+ * @param {Object} [user] - { userId, role }
  * @returns {Promise<Object>}
  */
-export async function listProjects(tenantId, query) {
+export async function listProjects(tenantId, query, user) {
   const { page, limit, search, status, priority, sortBy, sortOrder } = query;
   const offset = (page - 1) * limit;
 
   let qb = Project.query().where('projects.tenant_id', tenantId);
+
+  // If user is a regular employee, only show assigned projects
+  if (user && user.role === 'employee') {
+    const employee = await Employee.query()
+      .where('tenant_id', tenantId)
+      .where('user_id', user.userId)
+      .first();
+    if (employee) {
+      const assignedProjectIds = await Allocation.query()
+        .where('tenant_id', tenantId)
+        .where('employee_id', employee.id)
+        .distinct('project_id')
+        .select('project_id');
+      const ids = assignedProjectIds.map(a => a.project_id);
+      if (ids.length === 0) {
+        return paginate({ page, limit, total: 0, data: [] });
+      }
+      qb = qb.whereIn('projects.id', ids);
+    } else {
+      // Employee record not linked — return empty
+      return paginate({ page, limit, total: 0, data: [] });
+    }
+  }
 
   if (search) {
     qb = qb.where((builder) => {

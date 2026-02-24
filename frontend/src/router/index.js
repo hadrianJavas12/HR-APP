@@ -28,12 +28,14 @@ const routes = [
         path: 'employees',
         name: 'Employees',
         component: () => import('../views/EmployeesView.vue'),
+        meta: { roles: ['super_admin', 'hr_admin'] },
       },
       {
         path: 'employees/:id',
         name: 'EmployeeDetail',
         component: () => import('../views/EmployeeDetailView.vue'),
         props: true,
+        meta: { roles: ['super_admin', 'hr_admin'] },
       },
       {
         path: 'projects',
@@ -55,6 +57,7 @@ const routes = [
         path: 'allocations',
         name: 'Allocations',
         component: () => import('../views/AllocationsView.vue'),
+        meta: { roles: ['super_admin', 'hr_admin', 'project_manager'] },
       },
       {
         path: 'reports',
