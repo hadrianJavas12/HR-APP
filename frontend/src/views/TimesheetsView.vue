@@ -134,7 +134,7 @@
             <tbody>
               <tr v-for="ts in store.timesheets" :key="ts.id">
                 <td v-if="canApprove">
-                  <input type="checkbox" v-model="selectedIds" :value="ts.id" :disabled="ts.approval_status !== 'pending'" />
+                  <input type="checkbox" v-model="selectedIds" :value="ts.id" :disabled="ts.approval_status !== 'pending' || !canApproveRow(ts)" />
                 </td>
                 <td class="whitespace-nowrap">{{ formatDate(ts.date) }}</td>
                 <td>{{ ts.employee?.name || '—' }}</td>
@@ -152,12 +152,12 @@
                   <div class="flex space-x-2 text-sm">
                     <button v-if="ts.approval_status === 'pending'" @click="editTimesheet(ts)" class="text-primary-600 hover:underline">Edit</button>
                     <button
-                      v-if="canApprove && ts.approval_status === 'pending'"
+                      v-if="canApproveRow(ts) && ts.approval_status === 'pending'"
                       @click="approveOne(ts.id)"
                       class="text-green-600 hover:underline"
                     >Setujui</button>
                     <button
-                      v-if="canApprove && ts.approval_status === 'pending'"
+                      v-if="canApproveRow(ts) && ts.approval_status === 'pending'"
                       @click="rejectOne(ts.id)"
                       class="text-red-600 hover:underline"
                     >Tolak</button>
@@ -244,6 +244,14 @@ const store = useTimesheetStore();
 const authStore = useAuthStore();
 
 const canApprove = computed(() => authStore.hasRole('super_admin', 'hr_admin', 'project_manager'));
+
+function canApproveRow(ts) {
+  if (authStore.hasRole('super_admin', 'hr_admin')) return true;
+  if (authStore.hasRole('project_manager') && myEmployee.value && ts.project) {
+    return ts.project.project_manager_id === myEmployee.value.id;
+  }
+  return false;
+}
 
 const projects = ref([]);
 const employeeList = ref([]);
@@ -423,7 +431,7 @@ async function bulkReject() {
 
 function toggleSelectAll() {
   if (selectAll.value) {
-    selectedIds.value = store.timesheets.filter(t => t.approval_status === 'pending').map(t => t.id);
+    selectedIds.value = store.timesheets.filter(t => t.approval_status === 'pending' && canApproveRow(t)).map(t => t.id);
   } else {
     selectedIds.value = [];
   }

@@ -63,6 +63,7 @@ export const approve = asyncHandler(async (req, res) => {
     status,
     req.user.userId,
     rejection_reason,
+    req.user.role,
   );
   res.json({ success: true, data: ts });
 });

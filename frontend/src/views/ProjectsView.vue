@@ -61,6 +61,7 @@
           <span :class="statusBadge(project.status)">{{ project.status }}</span>
         </div>
 
+        <p v-if="project.manager" class="text-xs text-gray-500 mb-1">PM: <strong>{{ project.manager.name }}</strong></p>
         <p class="text-sm text-gray-600 mb-3 line-clamp-2">{{ project.description || 'No description' }}</p>
 
         <!-- Budget Progress -->
@@ -134,6 +135,13 @@
                 <option value="completed">Completed</option>
               </select>
             </div>
+            <div class="col-span-2">
+              <label class="form-label">Penanggung Jawab (PM) *</label>
+              <select v-model="form.project_manager_id" class="form-input" required>
+                <option value="" disabled>Pilih PM</option>
+                <option v-for="emp in employees" :key="emp.id" :value="emp.id">{{ emp.name }} — {{ emp.position || emp.department || '' }}</option>
+              </select>
+            </div>
             <div>
               <label class="form-label">Target Jam Kerja</label>
               <input v-model.number="form.planned_hours" type="number" min="0" class="form-input" placeholder="Estimasi total jam" />
@@ -174,6 +182,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useProjectStore } from '@/stores/projects.js';
 import { useAuthStore } from '@/stores/auth.js';
+import api from '@/services/api.js';
 import dayjs from 'dayjs';
 
 const store = useProjectStore();
@@ -184,12 +193,14 @@ const showEditModal = ref(false);
 const editingId = ref(null);
 const saving = ref(false);
 const formError = ref('');
+const employees = ref([]);
 
 const filters = reactive({ search: '', status: '', sortBy: 'name', sortOrder: 'asc' });
 
 const form = reactive({
   name: '', code: '', description: '', status: 'planning',
   planned_hours: null, planned_cost: null, start_date: '', end_date: '',
+  project_manager_id: '',
 });
 
 let searchTimeout;
@@ -230,6 +241,7 @@ function editProject(proj) {
     status: proj.status, planned_hours: proj.planned_hours, planned_cost: proj.planned_cost,
     start_date: proj.start_date ? dayjs(proj.start_date).format('YYYY-MM-DD') : '',
     end_date: proj.end_date ? dayjs(proj.end_date).format('YYYY-MM-DD') : '',
+    project_manager_id: proj.project_manager_id || '',
   });
   showEditModal.value = true;
 }
@@ -256,11 +268,22 @@ function closeModal() {
   showCreateModal.value = false;
   showEditModal.value = false;
   editingId.value = null;
-  Object.assign(form, { name: '', code: '', description: '', status: 'planning', planned_hours: null, planned_cost: null, start_date: '', end_date: '' });
+  Object.assign(form, { name: '', code: '', description: '', status: 'planning', planned_hours: null, planned_cost: null, start_date: '', end_date: '', project_manager_id: '' });
+}
+
+async function loadEmployees() {
+  try {
+    const { data } = await api.get('/employees?limit=100');
+    employees.value = data.data || [];
+  } catch (err) {
+    console.error('Failed to load employees', err);
+  }
 }
 
 function prevPage() { if (store.pagination.page > 1) { store.pagination.page--; loadProjects(); } }
 function nextPage() { if (store.pagination.page < store.pagination.totalPages) { store.pagination.page++; loadProjects(); } }
 
-onMounted(loadProjects);
+onMounted(async () => {
+  await Promise.all([loadProjects(), loadEmployees()]);
+});
 </script>

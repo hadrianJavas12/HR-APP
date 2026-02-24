@@ -1,5 +1,6 @@
 import { Timesheet } from '../models/Timesheet.js';
 import { Employee } from '../models/Employee.js';
+import { Project } from '../models/Project.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { paginate } from '../utils/pagination.js';
@@ -155,7 +156,7 @@ export async function updateTimesheet(tenantId, id, data, performedBy) {
  * @param {string} [rejectionReason]
  * @returns {Promise<Object>}
  */
-export async function approveTimesheet(tenantId, id, status, approvedBy, rejectionReason) {
+export async function approveTimesheet(tenantId, id, status, approvedBy, rejectionReason, userRole) {
   const ts = await Timesheet.query()
     .where('tenant_id', tenantId)
     .findById(id);
@@ -163,6 +164,19 @@ export async function approveTimesheet(tenantId, id, status, approvedBy, rejecti
   if (!ts) throw new NotFoundError('Timesheet entry not found');
   if (ts.approval_status !== 'pending') {
     throw new ForbiddenError('Timesheet already processed');
+  }
+
+  // Only super_admin and hr_admin can approve any timesheet.
+  // project_manager can only approve timesheets for projects they manage.
+  if (userRole === 'project_manager') {
+    const project = await Project.query().findById(ts.project_id);
+    const approverEmployee = await Employee.query()
+      .where('tenant_id', tenantId)
+      .where('user_id', approvedBy)
+      .first();
+    if (!approverEmployee || !project || project.project_manager_id !== approverEmployee.id) {
+      throw new ForbiddenError('Anda bukan PM dari proyek ini. Hanya PM yang bertanggung jawab atas proyek ini yang dapat menyetujui timesheet.');
+    }
   }
 
   const patchData = {
