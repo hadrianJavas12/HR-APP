@@ -116,54 +116,61 @@ git clone <URL_REPO> .
 
 ## 4. Konfigurasi Environment
 
-### 4.1 Buat File .env.production
+### 4.1 File .env.production Sudah Tersedia
+
+File `.env.production` sudah ada di dalam project dengan nilai yang sudah diisi. **Tidak perlu membuat ulang.**
+
+Jika ingin mengecek atau mengubah (misalnya SMTP):
 
 ```bash
 cd /mnt/tank/apps/hr-manhour
-cp .env.production.example .env.production
 nano .env.production
 ```
 
-### 4.2 Isi Nilai Environment
+Isi saat ini:
 
 ```env
 # ── Database ─────────────────────────────────
-DB_NAME=hr_manhour
-DB_USER=hr_admin
-DB_PASSWORD=<PASSWORD_KUAT_32_KARAKTER>
+DB_NAME=eleva-db
+DB_USER=eleva-admin
+DB_PASSWORD=8iWEnU8mMejzcg2cF+AEO+NhM7HhCiXekjb7RfLwukg=
 
 # ── Redis ────────────────────────────────────
-REDIS_PASSWORD=<PASSWORD_REDIS_KUAT>
+REDIS_PASSWORD=ZiUdDIF6Q77o03L1n53a5Bwyrx0G+h3V
 
 # ── JWT Secrets ──────────────────────────────
-JWT_SECRET=<RANDOM_64_CHAR>
-JWT_REFRESH_SECRET=<RANDOM_64_CHAR_LAIN>
+JWT_SECRET=770307e8c87a248f3aa7a21b8adeac13de043febfcd73fb232fcef29fcdfb46a0a561ada593a
+JWT_REFRESH_SECRET=a56bcf1f64798b31325360f53106a8f761d6737a73e76c934465b39226f9ad60f6c4
 
-# ── SMTP ─────────────────────────────────────
+# ── SMTP (sesuaikan dengan akun email Anda) ──
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=email@gmail.com
-SMTP_PASS=app-password
+SMTP_PASS=app-password-gmail
 SMTP_FROM=noreply@hadrianjg.web.id
 ```
 
-### 4.3 Generate Secret Keys
+> ⚠️ **Yang perlu disesuaikan:** hanya bagian SMTP jika ingin kirim email. Sisanya sudah siap.
 
-```bash
-# Generate JWT_SECRET
-openssl rand -hex 64
+### 4.2 Routing Frontend → Backend
 
-# Generate JWT_REFRESH_SECRET  
-openssl rand -hex 64
+Routing sudah dikonfigurasi otomatis:
 
-# Generate DB_PASSWORD
-openssl rand -base64 32
+- **Frontend** menggunakan path relatif `/api/v1` (tidak ada hardcoded URL)
+- **Nginx** di container frontend mem-proxy `/api/*` ke `backend:3000` secara internal
+- **Backend** CORS sudah diset ke `https://eleva.hadrianjg.web.id` via `docker-compose.prod.yml`
+- **Express** trust-proxy sudah aktif di production mode (untuk mendukung Cloudflare)
 
-# Generate REDIS_PASSWORD
-openssl rand -base64 24
+```
+Browser → https://eleva.hadrianjg.web.id
+    → Cloudflare (SSL termination)
+        → Router port forward :8888
+            → Nginx (hr-frontend container)
+                → /api/* → proxy ke hr-backend:3000
+                → /* → serve Vue SPA
 ```
 
-Salin output dari masing-masing command ke `.env.production`.
+**Tidak perlu mengubah file apapun.** Tinggal build dan deploy.
 
 ---
 
@@ -360,6 +367,10 @@ curl http://localhost:8888
 
 curl http://localhost:8888/api/v1/health
 # Seharusnya menampilkan: {"status":"ok",...}
+
+# Test CORS header
+curl -I -H "Origin: https://eleva.hadrianjg.web.id" http://localhost:8888/api/v1/health
+# Seharusnya ada header: access-control-allow-origin: https://eleva.hadrianjg.web.id
 ```
 
 ### 8.2 Test dari Browser
@@ -492,6 +503,7 @@ docker system prune -a --volumes
 | **Login gagal** | Pastikan seed sudah dijalankan atau buat user manual via API. |
 | **WebSocket tidak konek** | Pastikan Cloudflare **WebSockets** diaktifkan: Network → WebSockets → ON |
 | **CSS/JS tidak load** | Clear Cloudflare cache: Caching → Configuration → Purge Everything |
+| **CORS error di browser** | Pastikan `FRONTEND_URL` di docker-compose.prod.yml = `https://eleva.hadrianjg.web.id`. Rebuild backend. |
 
 ---
 
@@ -509,9 +521,8 @@ cd /mnt/tank/apps/hr-manhour
 # (dari PC: scp hr-manhour.tar.gz root@<IP>:/mnt/tank/apps/hr-manhour/)
 tar -xzf hr-manhour.tar.gz && rm hr-manhour.tar.gz
 
-# 4. Konfigurasi environment
-cp .env.production.example .env.production
-nano .env.production  # isi semua nilai
+# 4. File .env.production sudah ada, tidak perlu diubah
+# (opsional) nano .env.production  # jika ingin ubah SMTP
 
 # 5. Build & jalankan
 docker compose -f docker-compose.prod.yml --env-file .env.production build --no-cache

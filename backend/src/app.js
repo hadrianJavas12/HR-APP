@@ -16,6 +16,11 @@ import logger from './utils/logger.js';
 export function createApp() {
   const app = express();
 
+  // ── Trust proxy (Cloudflare → Nginx → Express) ──
+  if (config.env === 'production') {
+    app.set('trust proxy', true);
+  }
+
   // ── Security ────────────────────────────────
   app.use(helmet());
   app.use(cors({
