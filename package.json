@@ -1,0 +1,25 @@
+{
+  "name": "hr-manhour-monitor",
+  "version": "1.0.0",
+  "description": "HR Man-Hour Performance Monitoring System",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "docker-compose up --build",
+    "dev:backend": "npm --workspace=backend run dev",
+    "dev:frontend": "npm --workspace=frontend run dev",
+    "lint": "npm --workspace=backend run lint && npm --workspace=frontend run lint",
+    "test": "npm --workspace=backend run test",
+    "migrate": "npm --workspace=backend run migrate",
+    "seed": "npm --workspace=backend run seed",
+    "docker:up": "docker-compose up -d --build",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
