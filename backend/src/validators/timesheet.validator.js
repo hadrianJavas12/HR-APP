@@ -1,10 +1,10 @@
 import Joi from 'joi';
 
 export const createTimesheetSchema = Joi.object({
-  employee_id: Joi.string().uuid().required(),
+  employee_id: Joi.string().uuid().allow(null, ''),
   project_id: Joi.string().uuid().required(),
   task_id: Joi.string().uuid().allow(null),
-  date: Joi.date().iso().required(),
+  date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).required(),
   hours: Joi.number().min(0.25).max(24).required(),
   mode: Joi.string().valid('normal', 'overtime', 'holiday').default('normal'),
   notes: Joi.string().allow(null, ''),
@@ -13,7 +13,7 @@ export const createTimesheetSchema = Joi.object({
 export const updateTimesheetSchema = Joi.object({
   project_id: Joi.string().uuid(),
   task_id: Joi.string().uuid().allow(null),
-  date: Joi.date().iso(),
+  date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/),
   hours: Joi.number().min(0.25).max(24),
   mode: Joi.string().valid('normal', 'overtime', 'holiday'),
   notes: Joi.string().allow(null, ''),

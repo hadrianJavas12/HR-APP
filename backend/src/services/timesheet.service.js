@@ -61,6 +61,10 @@ export async function getTimesheet(tenantId, id) {
  * @returns {Promise<Object>}
  */
 export async function createTimesheet(tenantId, data, performedBy) {
+  if (!data.employee_id) {
+    throw new ValidationError('Employee ID is required. Please link your account to an employee record.');
+  }
+
   // Validate daily total
   await validateDailyHours(tenantId, data.employee_id, data.date, data.hours);
 

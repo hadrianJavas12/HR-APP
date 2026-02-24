@@ -1,6 +1,7 @@
 import Joi from 'joi';
 
 export const createEmployeeSchema = Joi.object({
+  user_id: Joi.string().uuid().allow(null, ''),
   employee_code: Joi.string().max(50).allow(null, ''),
   name: Joi.string().min(1).max(255).required(),
   email: Joi.string().email().required(),
@@ -14,6 +15,7 @@ export const createEmployeeSchema = Joi.object({
 });
 
 export const updateEmployeeSchema = Joi.object({
+  user_id: Joi.string().uuid().allow(null, ''),
   employee_code: Joi.string().max(50).allow(null, ''),
   name: Joi.string().min(1).max(255),
   email: Joi.string().email(),

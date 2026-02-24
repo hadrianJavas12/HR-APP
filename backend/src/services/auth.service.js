@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import config from '../config/index.js';
 import { User } from '../models/User.js';
 import { AuditLog } from '../models/AuditLog.js';
-import { UnauthorizedError, NotFoundError } from '../utils/errors.js';
+import { UnauthorizedError, NotFoundError, ConflictError } from '../utils/errors.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -134,6 +134,77 @@ export async function getProfile(userId) {
   const user = await User.query().findById(userId);
   if (!user) throw new NotFoundError('User not found');
   return user.$formatJson(user);
+}
+
+/**
+ * Register a new user account.
+ * Assigns the user to the default tenant with role 'employee'.
+ * @param {string} name
+ * @param {string} email
+ * @param {string} password
+ * @param {string} [ipAddress]
+ * @returns {Promise<LoginResult>}
+ */
+export async function register(name, email, password, ipAddress) {
+  // Find default tenant
+  const { Tenant } = await import('../models/Tenant.js');
+  let tenant = await Tenant.query().where('status', 'active').first();
+  if (!tenant) {
+    throw new NotFoundError('No active tenant available. Contact administrator.');
+  }
+
+  // Check duplicate email within tenant
+  const existing = await User.query()
+    .where('tenant_id', tenant.id)
+    .where('email', email)
+    .first();
+
+  if (existing) {
+    throw new ConflictError('Email sudah terdaftar. Silakan gunakan email lain.');
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const user = await User.query().insert({
+    tenant_id: tenant.id,
+    email,
+    password_hash: passwordHash,
+    name,
+    role: 'employee',
+    is_active: true,
+  });
+
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  await User.query().findById(user.id).patch({
+    refresh_token: refreshToken,
+    last_login_at: new Date().toISOString(),
+  });
+
+  await AuditLog.query().insert({
+    tenant_id: tenant.id,
+    entity: 'user',
+    entity_id: user.id,
+    action: 'create',
+    new_data: { name, email, role: 'employee' },
+    performed_by: user.id,
+    ip_address: ipAddress,
+  });
+
+  logger.info({ userId: user.id, email }, 'New user registered');
+
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tenantId: user.tenant_id,
+    },
+  };
 }
 
 // ── Token helpers ─────────────────────────────

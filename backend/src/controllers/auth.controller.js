@@ -16,6 +16,20 @@ export const login = asyncHandler(async (req, res) => {
 });
 
 /**
+ * POST /api/v1/auth/register
+ */
+export const register = asyncHandler(async (req, res) => {
+  const { name, email, password } = req.body;
+  const ipAddress = req.ip || req.headers['x-forwarded-for'];
+  const result = await authService.register(name, email, password, ipAddress);
+
+  res.status(201).json({
+    success: true,
+    data: result,
+  });
+});
+
+/**
  * POST /api/v1/auth/refresh
  */
 export const refresh = asyncHandler(async (req, res) => {

@@ -1,4 +1,5 @@
 import { Employee } from '../models/Employee.js';
+import { User } from '../models/User.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { NotFoundError, ConflictError } from '../utils/errors.js';
 import { paginate } from '../utils/pagination.js';
@@ -148,4 +149,40 @@ export async function deleteEmployee(tenantId, id, performedBy) {
     old_data: employee,
     performed_by: performedBy,
   });
+}
+
+/**
+ * List user accounts that are not yet linked to any employee record.
+ * @param {string} tenantId
+ * @returns {Promise<Array>}
+ */
+export async function listUnlinkedUsers(tenantId) {
+  const linkedUserIds = Employee.query()
+    .where('tenant_id', tenantId)
+    .whereNotNull('user_id')
+    .select('user_id');
+
+  const users = await User.query()
+    .where('tenant_id', tenantId)
+    .where('is_active', true)
+    .whereNotIn('id', linkedUserIds)
+    .select('id', 'email', 'name', 'role')
+    .orderBy('name');
+
+  return users;
+}
+
+/**
+ * List all registered user accounts for a tenant.
+ * @param {string} tenantId
+ * @returns {Promise<Array>}
+ */
+export async function listAllUsers(tenantId) {
+  const users = await User.query()
+    .where('tenant_id', tenantId)
+    .where('is_active', true)
+    .select('id', 'email', 'name', 'role')
+    .orderBy('name');
+
+  return users;
 }

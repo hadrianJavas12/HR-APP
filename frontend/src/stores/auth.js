@@ -42,6 +42,34 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
+   * Register a new account.
+   * @param {string} name
+   * @param {string} email
+   * @param {string} password
+   */
+  async function register(name, email, password) {
+    loading.value = true;
+    try {
+      const { data } = await api.post('/auth/register', { name, email, password });
+      const result = data.data;
+
+      user.value = result.user;
+      accessToken.value = result.accessToken;
+      refreshToken.value = result.refreshToken;
+
+      localStorage.setItem('accessToken', result.accessToken);
+      localStorage.setItem('refreshToken', result.refreshToken);
+      localStorage.setItem('user', JSON.stringify(result.user));
+
+      connectSocket(result.accessToken);
+
+      return result;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
    * Logout and clear session.
    */
   async function logout() {
@@ -100,6 +128,7 @@ export const useAuthStore = defineStore('auth', () => {
     userRole,
     userName,
     login,
+    register,
     logout,
     restoreSession,
     clearSession,

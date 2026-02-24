@@ -40,3 +40,19 @@ export const remove = asyncHandler(async (req, res) => {
   await employeeService.deleteEmployee(req.tenantId, req.params.id, req.user.userId);
   res.json({ success: true, message: 'Employee deactivated' });
 });
+
+/**
+ * GET /api/v1/employees/unlinked-users
+ */
+export const unlinkedUsers = asyncHandler(async (req, res) => {
+  const users = await employeeService.listUnlinkedUsers(req.tenantId);
+  res.json({ success: true, data: users });
+});
+
+/**
+ * GET /api/v1/employees/all-users
+ */
+export const allUsers = asyncHandler(async (req, res) => {
+  const users = await employeeService.listAllUsers(req.tenantId);
+  res.json({ success: true, data: users });
+});

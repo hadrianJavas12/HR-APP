@@ -1,4 +1,5 @@
 import * as timesheetService from '../services/timesheet.service.js';
+import { Employee } from '../models/Employee.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 /**
@@ -19,8 +20,18 @@ export const getById = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/v1/timesheets
+ * Auto-resolves employee_id from the authenticated user if not provided.
  */
 export const create = asyncHandler(async (req, res) => {
+  if (!req.body.employee_id) {
+    const emp = await Employee.query()
+      .where('tenant_id', req.tenantId)
+      .where('user_id', req.user.userId)
+      .first();
+    if (emp) {
+      req.body.employee_id = emp.id;
+    }
+  }
   const ts = await timesheetService.createTimesheet(req.tenantId, req.body, req.user.userId);
   res.status(201).json({ success: true, data: ts });
 });

@@ -40,11 +40,18 @@
           class="btn-primary w-full py-3"
         >
           <span v-if="loading">Signing in...</span>
-          <span v-else>Sign In</span>
+          <span v-else>Masuk</span>
         </button>
       </form>
 
-      <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+      <div class="mt-6 text-center">
+        <p class="text-sm text-gray-600">
+          Belum punya akun?
+          <router-link to="/register" class="text-primary-600 font-semibold hover:underline">Daftar di sini</router-link>
+        </p>
+      </div>
+
+      <div class="mt-4 p-4 bg-gray-50 rounded-lg">
         <p class="text-xs font-medium text-gray-500 mb-2">Demo Accounts:</p>
         <div class="space-y-1 text-xs text-gray-600">
           <p><strong>Admin:</strong> admin@demo.com / password123</p>

@@ -1,13 +1,13 @@
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Employees</h1>
+      <h1 class="text-2xl font-bold text-gray-900">Pegawai</h1>
       <button
         v-if="authStore.hasRole('super_admin', 'hr_admin')"
-        @click="showCreateModal = true"
+        @click="openCreateModal"
         class="btn-primary"
       >
-        + Add Employee
+        + Tambah Pegawai
       </button>
     </div>
 
@@ -15,13 +15,13 @@
     <div class="card mb-6">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <label class="form-label">Search</label>
-          <input v-model="filters.search" class="form-input" placeholder="Name, email, code..." @input="debouncedSearch" />
+          <label class="form-label">Cari</label>
+          <input v-model="filters.search" class="form-input" placeholder="Nama, email, ID..." @input="debouncedSearch" />
         </div>
         <div>
-          <label class="form-label">Department</label>
+          <label class="form-label">Departemen</label>
           <select v-model="filters.department" class="form-input" @change="loadEmployees">
-            <option value="">All</option>
+            <option value="">Semua</option>
             <option value="Engineering">Engineering</option>
             <option value="Design">Design</option>
             <option value="QA">QA</option>
@@ -32,19 +32,19 @@
         <div>
           <label class="form-label">Status</label>
           <select v-model="filters.status" class="form-input" @change="loadEmployees">
-            <option value="">All</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="on_leave">On Leave</option>
+            <option value="">Semua</option>
+            <option value="active">Aktif</option>
+            <option value="inactive">Nonaktif</option>
+            <option value="on_leave">Cuti</option>
           </select>
         </div>
         <div>
-          <label class="form-label">Sort By</label>
+          <label class="form-label">Urutkan</label>
           <select v-model="filters.sortBy" class="form-input" @change="loadEmployees">
-            <option value="name">Name</option>
-            <option value="department">Department</option>
-            <option value="cost_per_hour">Cost/Hour</option>
-            <option value="created_at">Date Added</option>
+            <option value="name">Nama</option>
+            <option value="department">Departemen</option>
+            <option value="cost_per_hour">Bayaran/Jam</option>
+            <option value="created_at">Tanggal Ditambahkan</option>
           </select>
         </div>
       </div>
@@ -53,7 +53,7 @@
     <!-- Table -->
     <div class="card">
       <div v-if="store.loading" class="text-center py-8">
-        <p class="text-gray-500">Loading...</p>
+        <p class="text-gray-500">Memuat...</p>
       </div>
 
       <div v-else>
@@ -62,6 +62,7 @@
             <thead>
               <tr>
                 <th>Pegawai</th>
+                <th>ID Akun</th>
                 <th>Departemen</th>
                 <th>Jabatan</th>
                 <th>Level</th>
@@ -77,7 +78,13 @@
                   <router-link :to="`/employees/${emp.id}`" class="font-medium text-primary-600 hover:underline">
                     {{ emp.name }}
                   </router-link>
-                  <p class="text-xs text-gray-400">{{ emp.employee_code }} · {{ emp.email }}</p>
+                  <p class="text-xs text-gray-400">{{ emp.email }}</p>
+                </td>
+                <td>
+                  <span v-if="emp.user_id" class="text-xs font-mono bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                    {{ emp.user_id.substring(0, 8) }}...
+                  </span>
+                  <span v-else class="text-xs text-gray-400">Belum terhubung</span>
                 </td>
                 <td>{{ emp.department || '—' }}</td>
                 <td>{{ emp.position || '—' }}</td>
@@ -97,7 +104,7 @@
                       @click="confirmDelete(emp)"
                       class="text-sm text-red-600 hover:underline"
                     >
-                      Delete
+                      Hapus
                     </button>
                   </div>
                 </td>
@@ -109,7 +116,7 @@
         <!-- Pagination -->
         <div class="flex items-center justify-between mt-4">
           <p class="text-sm text-gray-500">
-            Showing {{ store.employees.length }} of {{ store.pagination.total }} employees
+            Menampilkan {{ store.employees.length }} dari {{ store.pagination.total }} pegawai
           </p>
           <div class="flex space-x-2">
             <button
@@ -117,14 +124,14 @@
               :disabled="store.pagination.page <= 1"
               class="btn-secondary text-sm"
             >
-              ← Previous
+              ← Sebelumnya
             </button>
             <button
               @click="nextPage"
               :disabled="store.pagination.page >= store.pagination.totalPages"
               class="btn-secondary text-sm"
             >
-              Next →
+              Selanjutnya →
             </button>
           </div>
         </div>
@@ -134,12 +141,26 @@
     <!-- Create/Edit Modal -->
     <div v-if="showCreateModal || showEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-        <h2 class="text-lg font-bold mb-4">{{ showEditModal ? 'Edit Employee' : 'Add Employee' }}</h2>
+        <h2 class="text-lg font-bold mb-4">{{ showEditModal ? 'Edit Pegawai' : 'Tambah Pegawai' }}</h2>
 
         <form @submit.prevent="handleSave" class="space-y-4">
+          <!-- Link to User Account -->
+          <div class="p-3 bg-blue-50 rounded-lg">
+            <label class="form-label text-blue-800">Hubungkan ke Akun (Employee ID)</label>
+            <select v-model="form.user_id" class="form-input" @change="onUserSelected">
+              <option value="">-- Tidak Terhubung --</option>
+              <option v-for="u in unlinkedUsers" :key="u.id" :value="u.id">
+                {{ u.name }} ({{ u.email }}) — ID: {{ u.id.substring(0, 8) }}...
+              </option>
+            </select>
+            <p class="text-xs text-blue-600 mt-1">
+              Pilih akun terdaftar untuk menghubungkan pegawai dengan ID akun. Akun baru dapat dibuat di halaman Daftar.
+            </p>
+          </div>
+
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="form-label">Name *</label>
+              <label class="form-label">Nama *</label>
               <input v-model="form.name" class="form-input" required />
             </div>
             <div>
@@ -147,15 +168,11 @@
               <input v-model="form.email" type="email" class="form-input" required />
             </div>
             <div>
-              <label class="form-label">Employee Code</label>
-              <input v-model="form.employee_code" class="form-input" />
-            </div>
-            <div>
-              <label class="form-label">Department</label>
+              <label class="form-label">Departemen</label>
               <input v-model="form.department" class="form-input" />
             </div>
             <div>
-              <label class="form-label">Position</label>
+              <label class="form-label">Jabatan</label>
               <input v-model="form.position" class="form-input" />
             </div>
             <div>
@@ -181,9 +198,9 @@
           <div v-if="formError" class="text-sm text-red-500">{{ formError }}</div>
 
           <div class="flex justify-end space-x-3 pt-4">
-            <button type="button" @click="closeModal" class="btn-secondary">Cancel</button>
+            <button type="button" @click="closeModal" class="btn-secondary">Batal</button>
             <button type="submit" class="btn-primary" :disabled="saving">
-              {{ saving ? 'Saving...' : 'Save' }}
+              {{ saving ? 'Menyimpan...' : 'Simpan' }}
             </button>
           </div>
         </form>
@@ -196,6 +213,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useEmployeeStore } from '@/stores/employees.js';
 import { useAuthStore } from '@/stores/auth.js';
+import api from '@/services/api.js';
 
 const store = useEmployeeStore();
 const authStore = useAuthStore();
@@ -205,6 +223,7 @@ const showEditModal = ref(false);
 const editingId = ref(null);
 const saving = ref(false);
 const formError = ref('');
+const unlinkedUsers = ref([]);
 
 const filters = reactive({
   search: '',
@@ -214,9 +233,9 @@ const filters = reactive({
 });
 
 const form = reactive({
+  user_id: '',
   name: '',
   email: '',
-  employee_code: '',
   department: '',
   position: '',
   cost_per_hour: 0,
@@ -234,17 +253,56 @@ async function loadEmployees() {
   await store.fetchEmployees(filters);
 }
 
+async function loadUnlinkedUsers() {
+  try {
+    const { data } = await api.get('/employees/unlinked-users');
+    unlinkedUsers.value = data.data || [];
+  } catch (err) {
+    console.error('Failed to load unlinked users', err);
+    unlinkedUsers.value = [];
+  }
+}
+
+function onUserSelected() {
+  if (form.user_id) {
+    const selectedUser = unlinkedUsers.value.find(u => u.id === form.user_id);
+    if (selectedUser) {
+      form.name = selectedUser.name;
+      form.email = selectedUser.email;
+    }
+  }
+}
+
+async function openCreateModal() {
+  await loadUnlinkedUsers();
+  showCreateModal.value = true;
+}
+
 function editEmployee(emp) {
   editingId.value = emp.id;
   Object.assign(form, {
+    user_id: emp.user_id || '',
     name: emp.name,
     email: emp.email,
-    employee_code: emp.employee_code || '',
     department: emp.department || '',
     position: emp.position || '',
     cost_per_hour: parseFloat(emp.cost_per_hour),
     capacity_per_week: emp.capacity_per_week,
     seniority_level: emp.seniority_level,
+  });
+  // Load unlinked users + include currently linked user
+  loadUnlinkedUsers().then(() => {
+    if (emp.user_id) {
+      const alreadyInList = unlinkedUsers.value.find(u => u.id === emp.user_id);
+      if (!alreadyInList) {
+        unlinkedUsers.value.unshift({
+          id: emp.user_id,
+          name: emp.name,
+          email: emp.email,
+          role: 'employee',
+        });
+      }
+    }
   });
   showEditModal.value = true;
 }
@@ -254,27 +312,30 @@ async function handleSave() {
   formError.value = '';
 
   try {
+    const payload = { ...form };
+    if (!payload.user_id) delete payload.user_id;
+
     if (showEditModal.value) {
-      await store.updateEmployee(editingId.value, { ...form });
+      await store.updateEmployee(editingId.value, payload);
     } else {
-      await store.createEmployee({ ...form });
+      await store.createEmployee(payload);
     }
     closeModal();
     await loadEmployees();
   } catch (err) {
-    formError.value = err.response?.data?.error?.message || 'Failed to save';
+    formError.value = err.response?.data?.error?.message || 'Gagal menyimpan';
   } finally {
     saving.value = false;
   }
 }
 
 async function confirmDelete(emp) {
-  if (confirm(`Deactivate ${emp.name}? This action will set their status to inactive.`)) {
+  if (confirm(`Nonaktifkan ${emp.name}? Tindakan ini akan mengubah status menjadi nonaktif.`)) {
     try {
       await store.deleteEmployee(emp.id);
       await loadEmployees();
     } catch (err) {
-      alert('Failed to deactivate: ' + (err.response?.data?.error?.message || err.message));
+      alert('Gagal menonaktifkan: ' + (err.response?.data?.error?.message || err.message));
     }
   }
 }
@@ -284,7 +345,7 @@ function closeModal() {
   showEditModal.value = false;
   editingId.value = null;
   Object.assign(form, {
-    name: '', email: '', employee_code: '', department: '', position: '',
+    user_id: '', name: '', email: '', department: '', position: '',
     cost_per_hour: 0, capacity_per_week: 40, seniority_level: 'mid',
   });
 }
