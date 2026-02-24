@@ -61,14 +61,14 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Employee</th>
-                <th>Department</th>
-                <th>Position</th>
-                <th>Seniority</th>
-                <th>Cost/Hour</th>
-                <th>Capacity/Week</th>
+                <th>Pegawai</th>
+                <th>Departemen</th>
+                <th>Jabatan</th>
+                <th>Level</th>
+                <th>Bayaran/Jam</th>
+                <th>Kapasitas/Minggu</th>
                 <th>Status</th>
-                <th>Actions</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -82,7 +82,7 @@
                 <td>{{ emp.department || '—' }}</td>
                 <td>{{ emp.position || '—' }}</td>
                 <td><span class="badge-info">{{ emp.seniority_level }}</span></td>
-                <td class="font-mono">${{ parseFloat(emp.cost_per_hour).toFixed(2) }}</td>
+                <td class="font-mono">Rp {{ parseFloat(emp.cost_per_hour).toLocaleString() }}</td>
                 <td>{{ emp.capacity_per_week }}h</td>
                 <td>
                   <span :class="emp.status === 'active' ? 'badge-success' : emp.status === 'on_leave' ? 'badge-warning' : 'badge-gray'">
@@ -159,11 +159,11 @@
               <input v-model="form.position" class="form-input" />
             </div>
             <div>
-              <label class="form-label">Cost/Hour *</label>
+              <label class="form-label">Bayaran/Jam (Rp) *</label>
               <input v-model.number="form.cost_per_hour" type="number" min="0" step="0.01" class="form-input" required />
             </div>
             <div>
-              <label class="form-label">Capacity/Week (h)</label>
+              <label class="form-label">Kapasitas/Minggu (jam)</label>
               <input v-model.number="form.capacity_per_week" type="number" min="0" class="form-input" />
             </div>
             <div>

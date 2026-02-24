@@ -55,13 +55,12 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Employee</th>
-                <th>Project</th>
-                <th>Allocation %</th>
-                <th>Hours/Week</th>
-                <th>Period</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Pegawai</th>
+                <th>Proyek</th>
+                <th>Jam Terencana</th>
+                <th>Billable</th>
+                <th>Periode</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -77,24 +76,13 @@
                   </router-link>
                 </td>
                 <td>
-                  <div class="flex items-center space-x-2">
-                    <div class="w-16 bg-gray-200 rounded-full h-2">
-                      <div
-                        class="bg-primary-500 h-2 rounded-full"
-                        :style="{ width: Math.min(100, alloc.allocation_percentage) + '%' }"
-                      ></div>
-                    </div>
-                    <span class="text-sm font-medium">{{ alloc.allocation_percentage }}%</span>
-                  </div>
-                </td>
-                <td>{{ alloc.hours_per_week }}h</td>
-                <td class="text-sm">
-                  {{ formatDate(alloc.start_date) }} — {{ formatDate(alloc.end_date) }}
+                  <span class="text-sm font-medium">{{ alloc.planned_hours }}h</span>
                 </td>
                 <td>
-                  <span :class="alloc.status === 'active' ? 'badge-success' : alloc.status === 'planned' ? 'badge-info' : 'badge-gray'">
-                    {{ alloc.status }}
-                  </span>
+                  <span :class="alloc.billable ? 'badge-success' : 'badge-gray'">{{ alloc.billable ? 'Ya' : 'Tidak' }}</span>
+                </td>
+                <td class="text-sm">
+                  {{ formatDate(alloc.period_start) }} - {{ formatDate(alloc.period_end) }}
                 </td>
                 <td>
                   <div class="flex space-x-2 text-sm">
@@ -134,20 +122,23 @@
               </select>
             </div>
             <div>
-              <label class="form-label">Allocation % *</label>
-              <input v-model.number="form.allocation_percentage" type="number" min="1" max="100" class="form-input" required />
+              <label class="form-label">Jam Kerja (Total) *</label>
+              <input v-model.number="form.planned_hours" type="number" min="1" class="form-input" required />
             </div>
             <div>
-              <label class="form-label">Hours/Week *</label>
-              <input v-model.number="form.hours_per_week" type="number" min="1" max="80" class="form-input" required />
+              <label class="form-label">Billable</label>
+              <select v-model="form.billable" class="form-input">
+                <option :value="true">Ya</option>
+                <option :value="false">Tidak</option>
+              </select>
             </div>
             <div>
-              <label class="form-label">Start Date *</label>
-              <input v-model="form.start_date" type="date" class="form-input" required />
+              <label class="form-label">Mulai *</label>
+              <input v-model="form.period_start" type="date" class="form-input" required />
             </div>
             <div>
-              <label class="form-label">End Date *</label>
-              <input v-model="form.end_date" type="date" class="form-input" required />
+              <label class="form-label">Selesai *</label>
+              <input v-model="form.period_end" type="date" class="form-input" required />
             </div>
           </div>
 
@@ -189,11 +180,12 @@ const filters = reactive({ employee_id: '', project_id: '', status: '', sortBy: 
 
 const form = reactive({
   employee_id: '', project_id: '',
-  allocation_percentage: 100, hours_per_week: 40,
-  start_date: '', end_date: '',
+  planned_hours: 40,
+  period_start: '', period_end: '',
+  billable: true,
 });
 
-const capacityWarning = computed(() => form.allocation_percentage > 100);
+const capacityWarning = computed(() => false);
 
 function formatDate(d) { return d ? dayjs(d).format('DD MMM YYYY') : '—'; }
 
@@ -214,8 +206,8 @@ async function loadAllocations() {
 async function loadLookups() {
   try {
     const [eRes, pRes] = await Promise.all([
-      api.get('/employees?limit=200'),
-      api.get('/projects?limit=200'),
+      api.get('/employees?limit=100'),
+      api.get('/projects?limit=100'),
     ]);
     employees.value = eRes.data.data || [];
     projects.value = pRes.data.data || [];
@@ -228,9 +220,10 @@ function editAllocation(a) {
   editingId.value = a.id;
   Object.assign(form, {
     employee_id: a.employee_id, project_id: a.project_id,
-    allocation_percentage: a.allocation_percentage, hours_per_week: a.hours_per_week,
-    start_date: dayjs(a.start_date).format('YYYY-MM-DD'),
-    end_date: dayjs(a.end_date).format('YYYY-MM-DD'),
+    planned_hours: a.planned_hours,
+    period_start: dayjs(a.period_start).format('YYYY-MM-DD'),
+    period_end: dayjs(a.period_end).format('YYYY-MM-DD'),
+    billable: a.billable,
   });
   showEditModal.value = true;
 }
@@ -267,7 +260,7 @@ function closeModal() {
   showCreateModal.value = false;
   showEditModal.value = false;
   editingId.value = null;
-  Object.assign(form, { employee_id: '', project_id: '', allocation_percentage: 100, hours_per_week: 40, start_date: '', end_date: '' });
+  Object.assign(form, { employee_id: '', project_id: '', planned_hours: 40, period_start: '', period_end: '', billable: true });
 }
 
 onMounted(async () => {

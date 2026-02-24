@@ -13,13 +13,13 @@
         <div class="flex items-start justify-between">
           <div>
             <h2 class="text-xl font-bold">{{ project.name }}</h2>
-            <p class="text-gray-500">{{ project.project_code }}</p>
+            <p class="text-gray-500">{{ project.code }}</p>
             <span :class="statusBadge(project.status)" class="mt-2 inline-block">{{ project.status }}</span>
           </div>
           <div class="text-right space-y-1">
-            <p class="text-sm text-gray-400">Budget</p>
-            <p class="text-xl font-bold text-primary-600">${{ formatMoney(project.budget_amount) }}</p>
-            <p class="text-sm text-gray-400">{{ project.budget_hours || '∞' }} hours</p>
+            <p class="text-sm text-gray-400">Anggaran</p>
+            <p class="text-xl font-bold text-primary-600">Rp {{ formatMoney(project.planned_cost) }}</p>
+            <p class="text-sm text-gray-400">{{ project.planned_hours || '∞' }} jam target</p>
           </div>
         </div>
         <p class="text-sm text-gray-600 mt-3">{{ project.description || 'No description provided.' }}</p>
@@ -32,25 +32,25 @@
       <!-- KPIs -->
       <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div class="stat-card">
-          <p class="stat-label">Hours Used</p>
+          <p class="stat-label">Jam Terpakai</p>
           <p class="stat-value">{{ kpis.totalHours }}h</p>
         </div>
         <div class="stat-card">
-          <p class="stat-label">Budget Used</p>
+          <p class="stat-label">Pemakaian Budget</p>
           <p class="stat-value" :class="kpis.budgetPercent > 90 ? 'text-red-600' : 'text-green-600'">{{ kpis.budgetPercent }}%</p>
         </div>
         <div class="stat-card">
-          <p class="stat-label">Actual Cost</p>
-          <p class="stat-value">${{ kpis.actualCost }}</p>
+          <p class="stat-label">Biaya Aktual</p>
+          <p class="stat-value">Rp {{ kpis.actualCost }}</p>
         </div>
         <div class="stat-card">
-          <p class="stat-label">Cost Variance</p>
+          <p class="stat-label">Selisih Biaya</p>
           <p class="stat-value" :class="parseFloat(kpis.costVariance) > 0 ? 'text-red-600' : 'text-green-600'">
-            ${{ kpis.costVariance }}
+            Rp {{ kpis.costVariance }}
           </p>
         </div>
         <div class="stat-card">
-          <p class="stat-label">Team Members</p>
+          <p class="stat-label">Anggota Tim</p>
           <p class="stat-value">{{ kpis.teamSize }}</p>
         </div>
       </div>
@@ -124,7 +124,7 @@ const dashboardData = ref(null);
 
 const kpis = computed(() => {
   const d = dashboardData.value || {};
-  const budgetHours = project.value?.budget_hours || 0;
+  const budgetHours = project.value?.planned_hours || 0;
   const totalHours = parseFloat(d.totalHours || 0);
   return {
     totalHours: totalHours.toFixed(1),

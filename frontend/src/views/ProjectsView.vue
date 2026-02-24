@@ -34,7 +34,7 @@
           <select v-model="filters.sortBy" class="form-input" @change="loadProjects">
             <option value="name">Name</option>
             <option value="start_date">Start Date</option>
-            <option value="budget_hours">Budget Hours</option>
+            <option value="planned_hours">Planned Hours</option>
             <option value="created_at">Date Created</option>
           </select>
         </div>
@@ -56,7 +56,7 @@
             <router-link :to="`/projects/${project.id}`" class="text-lg font-bold text-primary-600 hover:underline">
               {{ project.name }}
             </router-link>
-            <p class="text-xs text-gray-400">{{ project.project_code }}</p>
+            <p class="text-xs text-gray-400">{{ project.code }}</p>
           </div>
           <span :class="statusBadge(project.status)">{{ project.status }}</span>
         </div>
@@ -67,7 +67,7 @@
         <div class="mb-3">
           <div class="flex justify-between text-xs text-gray-500 mb-1">
             <span>Hours Used</span>
-            <span>{{ hoursUsed(project) }} / {{ project.budget_hours || '∞' }}h</span>
+            <span>{{ hoursUsed(project) }} / {{ project.planned_hours || '∞' }}h</span>
           </div>
           <div class="w-full bg-gray-200 rounded-full h-2">
             <div
@@ -81,8 +81,8 @@
         <!-- Info -->
         <div class="grid grid-cols-2 gap-2 text-sm text-gray-500">
           <div>
-            <p class="text-xs text-gray-400">Budget</p>
-            <p class="font-medium">${{ formatMoney(project.budget_amount) }}</p>
+            <p class="text-xs text-gray-400">Anggaran</p>
+            <p class="font-medium">${{ formatMoney(project.planned_cost) }}</p>
           </div>
           <div>
             <p class="text-xs text-gray-400">Period</p>
@@ -122,8 +122,8 @@
               <input v-model="form.name" class="form-input" required />
             </div>
             <div>
-              <label class="form-label">Project Code *</label>
-              <input v-model="form.project_code" class="form-input" required />
+              <label class="form-label">Project Code</label>
+              <input v-model="form.code" class="form-input" />
             </div>
             <div>
               <label class="form-label">Status</label>
@@ -135,12 +135,12 @@
               </select>
             </div>
             <div>
-              <label class="form-label">Budget Hours</label>
-              <input v-model.number="form.budget_hours" type="number" min="0" class="form-input" />
+              <label class="form-label">Target Jam Kerja</label>
+              <input v-model.number="form.planned_hours" type="number" min="0" class="form-input" placeholder="Estimasi total jam" />
             </div>
             <div>
-              <label class="form-label">Budget Amount ($)</label>
-              <input v-model.number="form.budget_amount" type="number" min="0" step="0.01" class="form-input" />
+              <label class="form-label">Anggaran Biaya (Rp)</label>
+              <input v-model.number="form.planned_cost" type="number" min="0" step="0.01" class="form-input" placeholder="Total budget" />
             </div>
             <div>
               <label class="form-label">Start Date</label>
@@ -188,8 +188,8 @@ const formError = ref('');
 const filters = reactive({ search: '', status: '', sortBy: 'name', sortOrder: 'asc' });
 
 const form = reactive({
-  name: '', project_code: '', description: '', status: 'planning',
-  budget_hours: null, budget_amount: null, start_date: '', end_date: '',
+  name: '', code: '', description: '', status: 'planning',
+  planned_hours: null, planned_cost: null, start_date: '', end_date: '',
 });
 
 let searchTimeout;
@@ -209,8 +209,8 @@ function statusBadge(s) {
 function hoursUsed(p) { return parseFloat(p.actual_hours || 0).toFixed(1); }
 
 function budgetPercent(p) {
-  if (!p.budget_hours) return 0;
-  return Math.min(100, (parseFloat(p.actual_hours || 0) / p.budget_hours) * 100);
+  if (!p.planned_hours) return 0;
+  return Math.min(100, (parseFloat(p.actual_hours || 0) / p.planned_hours) * 100);
 }
 
 function budgetBarColor(p) {
@@ -226,8 +226,8 @@ function formatMoney(v) { return v ? parseFloat(v).toLocaleString() : '0'; }
 function editProject(proj) {
   editingId.value = proj.id;
   Object.assign(form, {
-    name: proj.name, project_code: proj.project_code, description: proj.description || '',
-    status: proj.status, budget_hours: proj.budget_hours, budget_amount: proj.budget_amount,
+    name: proj.name, code: proj.code, description: proj.description || '',
+    status: proj.status, planned_hours: proj.planned_hours, planned_cost: proj.planned_cost,
     start_date: proj.start_date ? dayjs(proj.start_date).format('YYYY-MM-DD') : '',
     end_date: proj.end_date ? dayjs(proj.end_date).format('YYYY-MM-DD') : '',
   });
@@ -256,7 +256,7 @@ function closeModal() {
   showCreateModal.value = false;
   showEditModal.value = false;
   editingId.value = null;
-  Object.assign(form, { name: '', project_code: '', description: '', status: 'planning', budget_hours: null, budget_amount: null, start_date: '', end_date: '' });
+  Object.assign(form, { name: '', code: '', description: '', status: 'planning', planned_hours: null, planned_cost: null, start_date: '', end_date: '' });
 }
 
 function prevPage() { if (store.pagination.page > 1) { store.pagination.page--; loadProjects(); } }

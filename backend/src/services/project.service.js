@@ -70,6 +70,10 @@ export async function createProject(tenantId, data, performedBy) {
     if (existing) throw new ConflictError('Project code already exists');
   }
 
+  // Normalize empty string dates to null
+  if (data.start_date === '') data.start_date = null;
+  if (data.end_date === '') data.end_date = null;
+
   const project = await Project.query().insert({
     ...data,
     tenant_id: tenantId,
@@ -101,6 +105,10 @@ export async function updateProject(tenantId, id, data, performedBy) {
     .findById(id);
 
   if (!project) throw new NotFoundError('Project not found');
+
+  // Normalize empty string dates to null
+  if (data.start_date === '') data.start_date = null;
+  if (data.end_date === '') data.end_date = null;
 
   const updated = await Project.query().patchAndFetchById(id, data);
 

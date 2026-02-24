@@ -5,6 +5,15 @@ export class AuditLog extends BaseModel {
     return 'audit_logs';
   }
 
+  // Audit logs are immutable — only created_at, no updated_at
+  $beforeInsert() {
+    this.created_at = new Date().toISOString();
+  }
+
+  $beforeUpdate() {
+    // Audit logs should never be updated
+  }
+
   static get jsonSchema() {
     return {
       type: 'object',
