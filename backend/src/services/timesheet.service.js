@@ -8,18 +8,58 @@ import logger from '../utils/logger.js';
 
 /**
  * List timesheets with filters.
+ * For employee role: only shows own timesheets.
+ * For project_manager: shows own + timesheets of projects they manage.
+ * For admin/HR: shows all.
  * @param {string} tenantId
  * @param {Object} query
+ * @param {Object} [user] - { userId, role }
  * @returns {Promise<Object>}
  */
-export async function listTimesheets(tenantId, query) {
+export async function listTimesheets(tenantId, query, user) {
   const { page, limit, employee_id, project_id, date_from, date_to, approval_status, mode, sortBy, sortOrder } = query;
   const offset = (page - 1) * limit;
 
   let qb = Timesheet.query().where('timesheets.tenant_id', tenantId);
 
-  if (employee_id) qb = qb.where('employee_id', employee_id);
-  if (project_id) qb = qb.where('project_id', project_id);
+  // Role-based filtering
+  if (user && user.role === 'employee') {
+    // Employees can only see their own timesheets
+    const emp = await Employee.query()
+      .where('tenant_id', tenantId)
+      .where('user_id', user.userId)
+      .first();
+    if (emp) {
+      qb = qb.where('timesheets.employee_id', emp.id);
+    } else {
+      return paginate({ page, limit, total: 0, data: [] });
+    }
+  } else if (user && user.role === 'project_manager') {
+    // PM can see own timesheets + timesheets from projects they manage
+    const emp = await Employee.query()
+      .where('tenant_id', tenantId)
+      .where('user_id', user.userId)
+      .first();
+    if (emp) {
+      const managedProjects = await Project.query()
+        .where('tenant_id', tenantId)
+        .where('project_manager_id', emp.id)
+        .select('id');
+      const managedIds = managedProjects.map(p => p.id);
+      qb = qb.where(builder => {
+        builder.where('timesheets.employee_id', emp.id);
+        if (managedIds.length > 0) {
+          builder.orWhereIn('timesheets.project_id', managedIds);
+        }
+      });
+    } else {
+      return paginate({ page, limit, total: 0, data: [] });
+    }
+  }
+  // super_admin, hr_admin, finance, viewer: see all (no extra filter)
+
+  if (employee_id) qb = qb.where('timesheets.employee_id', employee_id);
+  if (project_id) qb = qb.where('timesheets.project_id', project_id);
   if (date_from) qb = qb.where('date', '>=', date_from);
   if (date_to) qb = qb.where('date', '<=', date_to);
   if (approval_status) qb = qb.where('approval_status', approval_status);
@@ -166,16 +206,16 @@ export async function approveTimesheet(tenantId, id, status, approvedBy, rejecti
     throw new ForbiddenError('Timesheet already processed');
   }
 
-  // Only super_admin and hr_admin can approve any timesheet.
-  // project_manager can only approve timesheets for projects they manage.
-  if (userRole === 'project_manager') {
+  // Only the Project Manager (PM) of the related project can approve timesheets.
+  // super_admin is the only role that can bypass this check.
+  if (userRole !== 'super_admin') {
     const project = await Project.query().findById(ts.project_id);
     const approverEmployee = await Employee.query()
       .where('tenant_id', tenantId)
       .where('user_id', approvedBy)
       .first();
     if (!approverEmployee || !project || project.project_manager_id !== approverEmployee.id) {
-      throw new ForbiddenError('Anda bukan PM dari proyek ini. Hanya PM yang bertanggung jawab atas proyek ini yang dapat menyetujui timesheet.');
+      throw new ForbiddenError('Hanya PM yang bertanggung jawab atas proyek ini yang dapat menyetujui/menolak timesheet.');
     }
   }
 

@@ -72,7 +72,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 const sidebarOpen = ref(true);
 
-const currentDate = computed(() => new Date().toLocaleDateString('en-US', {
+const currentDate = computed(() => new Date().toLocaleDateString('id-ID', {
   weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
 }));
 
@@ -83,23 +83,23 @@ const navItems = computed(() => {
 
   // Employees: only HR and Admin
   if (authStore.hasRole('super_admin', 'hr_admin')) {
-    items.push({ path: '/employees', label: 'Employees', icon: '👥' });
+    items.push({ path: '/employees', label: 'Pegawai', icon: '👥' });
   }
 
-  items.push({ path: '/projects', label: 'Projects', icon: '📁' });
-  items.push({ path: '/timesheets', label: 'Timesheets', icon: '⏱️' });
+  items.push({ path: '/projects', label: 'Proyek', icon: '📁' });
+  items.push({ path: '/timesheets', label: 'Timesheet', icon: '⏱️' });
 
   // Allocations: PM, HR, and Admin
   if (authStore.hasRole('super_admin', 'hr_admin', 'project_manager')) {
-    items.push({ path: '/allocations', label: 'Allocations', icon: '📋' });
+    items.push({ path: '/allocations', label: 'Alokasi', icon: '📋' });
   }
 
   if (authStore.hasRole('super_admin', 'hr_admin', 'project_manager', 'finance')) {
-    items.push({ path: '/reports', label: 'Reports', icon: '📈' });
+    items.push({ path: '/reports', label: 'Laporan', icon: '📈' });
   }
 
   if (authStore.hasRole('super_admin', 'hr_admin')) {
-    items.push({ path: '/audit-logs', label: 'Audit Logs', icon: '📝' });
+    items.push({ path: '/audit-logs', label: 'Log Audit', icon: '📝' });
   }
 
   return items;

@@ -1,13 +1,13 @@
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Projects</h1>
+      <h1 class="text-2xl font-bold text-gray-900">Proyek</h1>
       <button
         v-if="authStore.hasRole('super_admin', 'hr_admin', 'project_manager')"
         @click="showCreateModal = true"
         class="btn-primary"
       >
-        + New Project
+        + Proyek Baru
       </button>
     </div>
 
@@ -15,34 +15,34 @@
     <div class="card mb-6">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <label class="form-label">Search</label>
-          <input v-model="filters.search" class="form-input" placeholder="Name, code..." @input="debouncedSearch" />
+          <label class="form-label">Cari</label>
+          <input v-model="filters.search" class="form-input" placeholder="Nama, kode..." @input="debouncedSearch" />
         </div>
         <div>
           <label class="form-label">Status</label>
           <select v-model="filters.status" class="form-input" @change="loadProjects">
-            <option value="">All</option>
-            <option value="planning">Planning</option>
-            <option value="active">Active</option>
-            <option value="on_hold">On Hold</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="">Semua</option>
+            <option value="planning">Perencanaan</option>
+            <option value="active">Aktif</option>
+            <option value="on_hold">Ditunda</option>
+            <option value="completed">Selesai</option>
+            <option value="cancelled">Dibatalkan</option>
           </select>
         </div>
         <div>
-          <label class="form-label">Sort By</label>
+          <label class="form-label">Urutkan</label>
           <select v-model="filters.sortBy" class="form-input" @change="loadProjects">
-            <option value="name">Name</option>
-            <option value="start_date">Start Date</option>
-            <option value="planned_hours">Planned Hours</option>
-            <option value="created_at">Date Created</option>
+            <option value="name">Nama</option>
+            <option value="start_date">Tanggal Mulai</option>
+            <option value="planned_hours">Jam Direncanakan</option>
+            <option value="created_at">Tanggal Dibuat</option>
           </select>
         </div>
         <div>
-          <label class="form-label">Order</label>
+          <label class="form-label">Urutan</label>
           <select v-model="filters.sortOrder" class="form-input" @change="loadProjects">
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
+            <option value="asc">Naik</option>
+            <option value="desc">Turun</option>
           </select>
         </div>
       </div>
@@ -62,12 +62,12 @@
         </div>
 
         <p v-if="project.manager" class="text-xs text-gray-500 mb-1">PM: <strong>{{ project.manager.name }}</strong></p>
-        <p class="text-sm text-gray-600 mb-3 line-clamp-2">{{ project.description || 'No description' }}</p>
+        <p class="text-sm text-gray-600 mb-3 line-clamp-2">{{ project.description || 'Tanpa deskripsi' }}</p>
 
         <!-- Budget Progress -->
         <div class="mb-3">
           <div class="flex justify-between text-xs text-gray-500 mb-1">
-            <span>Hours Used</span>
+            <span>Jam Terpakai</span>
             <span>{{ hoursUsed(project) }} / {{ project.planned_hours || '∞' }}h</span>
           </div>
           <div class="w-full bg-gray-200 rounded-full h-2">
@@ -86,53 +86,53 @@
             <p class="font-medium">${{ formatMoney(project.planned_cost) }}</p>
           </div>
           <div>
-            <p class="text-xs text-gray-400">Period</p>
+            <p class="text-xs text-gray-400">Periode</p>
             <p class="font-medium">{{ formatDate(project.start_date) }}</p>
           </div>
         </div>
 
         <!-- Actions -->
         <div class="flex justify-end mt-4 space-x-2">
-          <button @click="editProject(project)" class="text-sm text-primary-600 hover:underline">Edit</button>
+          <button @click="editProject(project)" class="text-sm text-primary-600 hover:underline">Ubah</button>
         </div>
       </div>
     </div>
 
-    <div v-if="store.loading" class="text-center py-8 text-gray-500">Loading...</div>
+    <div v-if="store.loading" class="text-center py-8 text-gray-500">Memuat...</div>
 
     <!-- Pagination -->
     <div class="flex items-center justify-between" v-if="store.pagination.total > 0">
       <p class="text-sm text-gray-500">
-        {{ store.projects.length }} of {{ store.pagination.total }} projects
+        {{ store.projects.length }} dari {{ store.pagination.total }} proyek
       </p>
       <div class="flex space-x-2">
-        <button @click="prevPage" :disabled="store.pagination.page <= 1" class="btn-secondary text-sm">← Prev</button>
-        <button @click="nextPage" :disabled="store.pagination.page >= store.pagination.totalPages" class="btn-secondary text-sm">Next →</button>
+        <button @click="prevPage" :disabled="store.pagination.page <= 1" class="btn-secondary text-sm">← Sebelumnya</button>
+        <button @click="nextPage" :disabled="store.pagination.page >= store.pagination.totalPages" class="btn-secondary text-sm">Selanjutnya →</button>
       </div>
     </div>
 
     <!-- Create/Edit Modal -->
     <div v-if="showCreateModal || showEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-        <h2 class="text-lg font-bold mb-4">{{ showEditModal ? 'Edit Project' : 'Create Project' }}</h2>
+        <h2 class="text-lg font-bold mb-4">{{ showEditModal ? 'Edit Proyek' : 'Buat Proyek' }}</h2>
 
         <form @submit.prevent="handleSave" class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div class="col-span-2">
-              <label class="form-label">Name *</label>
+              <label class="form-label">Nama *</label>
               <input v-model="form.name" class="form-input" required />
             </div>
             <div>
-              <label class="form-label">Project Code</label>
+              <label class="form-label">Kode Proyek</label>
               <input v-model="form.code" class="form-input" />
             </div>
             <div>
               <label class="form-label">Status</label>
               <select v-model="form.status" class="form-input">
-                <option value="planning">Planning</option>
-                <option value="active">Active</option>
-                <option value="on_hold">On Hold</option>
-                <option value="completed">Completed</option>
+                <option value="planning">Perencanaan</option>
+                <option value="active">Aktif</option>
+                <option value="on_hold">Ditunda</option>
+                <option value="completed">Selesai</option>
               </select>
             </div>
             <div class="col-span-2">
@@ -151,15 +151,15 @@
               <input v-model.number="form.planned_cost" type="number" min="0" step="0.01" class="form-input" placeholder="Total budget" />
             </div>
             <div>
-              <label class="form-label">Start Date</label>
+              <label class="form-label">Tanggal Mulai</label>
               <input v-model="form.start_date" type="date" class="form-input" />
             </div>
             <div>
-              <label class="form-label">End Date</label>
+              <label class="form-label">Tanggal Selesai</label>
               <input v-model="form.end_date" type="date" class="form-input" />
             </div>
             <div class="col-span-2">
-              <label class="form-label">Description</label>
+              <label class="form-label">Deskripsi</label>
               <textarea v-model="form.description" class="form-input" rows="3"></textarea>
             </div>
           </div>
@@ -167,9 +167,9 @@
           <div v-if="formError" class="text-sm text-red-500">{{ formError }}</div>
 
           <div class="flex justify-end space-x-3 pt-4">
-            <button type="button" @click="closeModal" class="btn-secondary">Cancel</button>
+            <button type="button" @click="closeModal" class="btn-secondary">Batal</button>
             <button type="submit" class="btn-primary" :disabled="saving">
-              {{ saving ? 'Saving...' : 'Save' }}
+              {{ saving ? 'Menyimpan...' : 'Simpan' }}
             </button>
           </div>
         </form>
@@ -273,7 +273,7 @@ function closeModal() {
 
 async function loadEmployees() {
   try {
-    const { data } = await api.get('/employees?limit=100');
+    const { data } = await api.get('/employees/list-simple');
     employees.value = data.data || [];
   } catch (err) {
     console.error('Failed to load employees', err);

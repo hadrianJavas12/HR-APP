@@ -16,6 +16,7 @@ router.use(authenticate, resolveTenant, requireTenant);
 
 router.get('/', authorize('super_admin', 'hr_admin'), validate(employeeQuerySchema, 'query'), empCtrl.list);
 router.get('/me', empCtrl.getMyEmployee);
+router.get('/list-simple', authorize('super_admin', 'hr_admin', 'project_manager'), empCtrl.listSimple);
 router.get('/unlinked-users', authorize('super_admin', 'hr_admin'), empCtrl.unlinkedUsers);
 router.get('/all-users', empCtrl.allUsers);
 router.get('/:id', authorize('super_admin', 'hr_admin'), empCtrl.getById);

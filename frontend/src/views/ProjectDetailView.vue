@@ -1,11 +1,11 @@
 <template>
   <div>
     <div class="flex items-center mb-6">
-      <router-link to="/projects" class="text-primary-600 hover:underline mr-3">← Back</router-link>
-      <h1 class="text-2xl font-bold text-gray-900">Project Detail</h1>
+      <router-link to="/projects" class="text-primary-600 hover:underline mr-3">← Kembali</router-link>
+      <h1 class="text-2xl font-bold text-gray-900">Detail Proyek</h1>
     </div>
 
-    <div v-if="loading" class="text-center py-8 text-gray-500">Loading...</div>
+    <div v-if="loading" class="text-center py-8 text-gray-500">Memuat...</div>
 
     <template v-else-if="project">
       <!-- Header -->
@@ -22,10 +22,10 @@
             <p class="text-sm text-gray-400">{{ project.planned_hours || '∞' }} jam target</p>
           </div>
         </div>
-        <p class="text-sm text-gray-600 mt-3">{{ project.description || 'No description provided.' }}</p>
+        <p class="text-sm text-gray-600 mt-3">{{ project.description || 'Tidak ada deskripsi.' }}</p>
         <div class="flex space-x-6 mt-3 text-sm text-gray-500">
-          <span>Start: {{ formatDate(project.start_date) }}</span>
-          <span>End: {{ formatDate(project.end_date) }}</span>
+          <span>Mulai: {{ formatDate(project.start_date) }}</span>
+          <span>Selesai: {{ formatDate(project.end_date) }}</span>
         </div>
       </div>
 
@@ -72,9 +72,9 @@
       <!-- Team & Timesheets -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div class="card">
-          <h3 class="text-lg font-semibold mb-4">Team Allocations</h3>
+          <h3 class="text-lg font-semibold mb-4">Alokasi Tim</h3>
           <table class="data-table" v-if="allocations.length">
-            <thead><tr><th>Employee</th><th>Allocation</th><th>Hours/Week</th><th>Period</th></tr></thead>
+            <thead><tr><th>Pegawai</th><th>Alokasi</th><th>Jam/Minggu</th><th>Periode</th></tr></thead>
             <tbody>
               <tr v-for="a in allocations" :key="a.id">
                 <td>
@@ -88,13 +88,13 @@
               </tr>
             </tbody>
           </table>
-          <p v-else class="text-sm text-gray-400">No team allocations.</p>
+          <p v-else class="text-sm text-gray-400">Belum ada alokasi tim.</p>
         </div>
 
         <div class="card">
-          <h3 class="text-lg font-semibold mb-4">Hours by Employee</h3>
+          <h3 class="text-lg font-semibold mb-4">Jam per Pegawai</h3>
           <table class="data-table" v-if="hoursByEmployee.length">
-            <thead><tr><th>Employee</th><th>Total Hours</th><th>Approved</th></tr></thead>
+            <thead><tr><th>Pegawai</th><th>Total Jam</th><th>Disetujui</th></tr></thead>
             <tbody>
               <tr v-for="h in hoursByEmployee" :key="h.employee_id">
                 <td>{{ h.employee_name }}</td>
@@ -103,7 +103,7 @@
               </tr>
             </tbody>
           </table>
-          <p v-else class="text-sm text-gray-400">No data.</p>
+          <p v-else class="text-sm text-gray-400">Belum ada data.</p>
         </div>
       </div>
     </template>
@@ -151,7 +151,7 @@ async function loadData() {
     const [projRes, allocRes, dashRes] = await Promise.all([
       api.get(`/projects/${id}`),
       api.get(`/allocations?project_id=${id}`),
-      api.get(`/dashboard/project/${id}`),
+      api.get(`/dashboard/projects/${id}`),
     ]);
     project.value = projRes.data.data;
     allocations.value = allocRes.data.data || [];

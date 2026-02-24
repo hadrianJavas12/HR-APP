@@ -1,11 +1,11 @@
 <template>
   <div>
     <div class="flex items-center mb-6">
-      <router-link to="/employees" class="text-primary-600 hover:underline mr-3">← Back</router-link>
-      <h1 class="text-2xl font-bold text-gray-900">Employee Detail</h1>
+      <router-link to="/employees" class="text-primary-600 hover:underline mr-3">← Kembali</router-link>
+      <h1 class="text-2xl font-bold text-gray-900">Detail Pegawai</h1>
     </div>
 
-    <div v-if="loading" class="text-center py-8 text-gray-500">Loading...</div>
+    <div v-if="loading" class="text-center py-8 text-gray-500">Memuat...</div>
 
     <template v-else-if="employee">
       <!-- Header Card -->
@@ -21,15 +21,15 @@
             </div>
           </div>
           <div class="text-right">
-            <p class="text-2xl font-bold text-primary-600">${{ parseFloat(employee.cost_per_hour).toFixed(2) }}/hr</p>
-            <p class="text-sm text-gray-400">Capacity: {{ employee.capacity_per_week }}h/week</p>
+            <p class="text-2xl font-bold text-primary-600">Rp {{ parseFloat(employee.cost_per_hour).toLocaleString() }}/jam</p>
+            <p class="text-sm text-gray-400">Kapasitas: {{ employee.capacity_per_week }}j/minggu</p>
           </div>
         </div>
       </div>
 
       <!-- Period Selector -->
       <div class="flex items-center space-x-4 mb-6">
-        <label class="form-label mb-0">Period:</label>
+        <label class="form-label mb-0">Periode:</label>
         <input v-model="startDate" type="date" class="form-input w-auto" @change="loadData" />
         <span class="text-gray-400">to</span>
         <input v-model="endDate" type="date" class="form-input w-auto" @change="loadData" />
@@ -38,29 +38,29 @@
       <!-- KPI Cards -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="stat-card">
-          <p class="stat-label">Total Hours</p>
+          <p class="stat-label">Total Jam</p>
           <p class="stat-value">{{ kpis.totalHours }}h</p>
         </div>
         <div class="stat-card">
-          <p class="stat-label">Billable Hours</p>
+          <p class="stat-label">Jam Billable</p>
           <p class="stat-value">{{ kpis.billableHours }}h</p>
         </div>
         <div class="stat-card">
-          <p class="stat-label">Utilization</p>
+          <p class="stat-label">Utilisasi</p>
           <p class="stat-value" :class="utilizationColor">{{ kpis.utilization }}%</p>
         </div>
         <div class="stat-card">
-          <p class="stat-label">Total Cost</p>
-          <p class="stat-value">${{ kpis.totalCost }}</p>
+          <p class="stat-label">Total Biaya</p>
+          <p class="stat-value">Rp {{ kpis.totalCost }}</p>
         </div>
       </div>
 
       <!-- Project Allocations -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div class="card">
-          <h3 class="text-lg font-semibold mb-4">Current Allocations</h3>
+          <h3 class="text-lg font-semibold mb-4">Alokasi Saat Ini</h3>
           <table class="data-table" v-if="allocations.length">
-            <thead><tr><th>Project</th><th>Allocation %</th><th>Hours/Week</th><th>Period</th></tr></thead>
+            <thead><tr><th>Proyek</th><th>Alokasi %</th><th>Jam/Minggu</th><th>Periode</th></tr></thead>
             <tbody>
               <tr v-for="a in allocations" :key="a.id">
                 <td>
@@ -74,13 +74,13 @@
               </tr>
             </tbody>
           </table>
-          <p v-else class="text-sm text-gray-400">No active allocations.</p>
+          <p v-else class="text-sm text-gray-400">Belum ada alokasi aktif.</p>
         </div>
 
         <div class="card">
-          <h3 class="text-lg font-semibold mb-4">Recent Timesheets</h3>
+          <h3 class="text-lg font-semibold mb-4">Timesheet Terbaru</h3>
           <table class="data-table" v-if="timesheets.length">
-            <thead><tr><th>Date</th><th>Project</th><th>Hours</th><th>Status</th></tr></thead>
+            <thead><tr><th>Tanggal</th><th>Proyek</th><th>Jam</th><th>Status</th></tr></thead>
             <tbody>
               <tr v-for="t in timesheets" :key="t.id">
                 <td>{{ formatDate(t.date) }}</td>
@@ -94,7 +94,7 @@
               </tr>
             </tbody>
           </table>
-          <p v-else class="text-sm text-gray-400">No timesheets in this period.</p>
+          <p v-else class="text-sm text-gray-400">Belum ada timesheet di periode ini.</p>
         </div>
       </div>
     </template>
@@ -146,8 +146,8 @@ async function loadData() {
     const [empRes, allocRes, tsRes, dashRes] = await Promise.all([
       api.get(`/employees/${id}`),
       api.get(`/allocations?employee_id=${id}`),
-      api.get(`/timesheets?employee_id=${id}&start_date=${startDate.value}&end_date=${endDate.value}&limit=20`),
-      api.get(`/dashboard/employee/${id}?start_date=${startDate.value}&end_date=${endDate.value}`),
+      api.get(`/timesheets?employee_id=${id}&date_from=${startDate.value}&date_to=${endDate.value}&limit=20`),
+      api.get(`/dashboard/employees/${id}?period_start=${startDate.value}&period_end=${endDate.value}`),
     ]);
     employee.value = empRes.data.data;
     allocations.value = allocRes.data.data || [];

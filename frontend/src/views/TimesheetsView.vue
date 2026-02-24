@@ -14,7 +14,7 @@
             (ID Akun: <span class="font-mono">{{ authStore.user?.id?.substring(0, 8) }}...</span>)
           </p>
           <p class="text-xs text-blue-600">
-            Pegawai: {{ myEmployee.name }} — {{ myEmployee.department || 'No Dept' }} · {{ myEmployee.position || 'No Position' }}
+            Pegawai: {{ myEmployee.name }} — {{ myEmployee.department || 'Tanpa Dept' }} · {{ myEmployee.position || 'Tanpa Jabatan' }}
           </p>
         </div>
       </div>
@@ -246,8 +246,10 @@ const authStore = useAuthStore();
 const canApprove = computed(() => authStore.hasRole('super_admin', 'hr_admin', 'project_manager'));
 
 function canApproveRow(ts) {
-  if (authStore.hasRole('super_admin', 'hr_admin')) return true;
-  if (authStore.hasRole('project_manager') && myEmployee.value && ts.project) {
+  // super_admin can approve any timesheet
+  if (authStore.hasRole('super_admin')) return true;
+  // All other roles (including hr_admin, project_manager) must be the PM of the project
+  if (myEmployee.value && ts.project) {
     return ts.project.project_manager_id === myEmployee.value.id;
   }
   return false;
@@ -317,7 +319,7 @@ async function loadLookups() {
   try {
     const [pRes, eRes] = await Promise.all([
       api.get('/projects?limit=100'),
-      canApprove.value ? api.get('/employees?limit=100') : Promise.resolve({ data: { data: [] } }),
+      canApprove.value ? api.get('/employees/list-simple') : Promise.resolve({ data: { data: [] } }),
     ]);
     projects.value = pRes.data.data || [];
     employeeList.value = eRes.data.data || [];

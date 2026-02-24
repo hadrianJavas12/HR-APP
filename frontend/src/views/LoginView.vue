@@ -3,7 +3,7 @@
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
       <div class="text-center mb-8">
         <h1 class="text-2xl font-bold text-gray-900">HR Man-Hour Monitor</h1>
-        <p class="text-gray-500 mt-2">Sign in to your account</p>
+        <p class="text-gray-500 mt-2">Masuk ke akun Anda</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="space-y-5">
@@ -12,7 +12,7 @@
         </div>
 
         <div>
-          <label class="form-label">Email Address</label>
+          <label class="form-label">Alamat Email</label>
           <input
             v-model="email"
             type="email"
@@ -24,7 +24,7 @@
         </div>
 
         <div>
-          <label class="form-label">Password</label>
+          <label class="form-label">Kata Sandi</label>
           <input
             v-model="password"
             type="password"
@@ -39,7 +39,7 @@
           :disabled="loading"
           class="btn-primary w-full py-3"
         >
-          <span v-if="loading">Signing in...</span>
+          <span v-if="loading">Sedang masuk...</span>
           <span v-else>Masuk</span>
         </button>
       </form>
@@ -52,7 +52,7 @@
       </div>
 
       <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-        <p class="text-xs font-medium text-gray-500 mb-2">Demo Accounts:</p>
+        <p class="text-xs font-medium text-gray-500 mb-2">Akun Demo:</p>
         <div class="space-y-1 text-xs text-gray-600">
           <p><strong>Admin:</strong> admin@demo.com / password123</p>
           <p><strong>HR:</strong> hr@demo.com / password123</p>
@@ -87,7 +87,7 @@ async function handleLogin() {
     const redirect = route.query.redirect || '/';
     router.push(redirect);
   } catch (err) {
-    error.value = err.response?.data?.error?.message || 'Login failed. Please try again.';
+    error.value = err.response?.data?.error?.message || 'Login gagal. Silakan coba lagi.';
   } finally {
     loading.value = false;
   }

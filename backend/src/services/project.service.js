@@ -40,6 +40,26 @@ export async function listProjects(tenantId, query, user) {
       // Employee record not linked — return empty
       return paginate({ page, limit, total: 0, data: [] });
     }
+  } else if (user && user.role === 'project_manager') {
+    // PM sees allocated projects + projects they manage
+    const employee = await Employee.query()
+      .where('tenant_id', tenantId)
+      .where('user_id', user.userId)
+      .first();
+    if (employee) {
+      const assignedProjectIds = await Allocation.query()
+        .where('tenant_id', tenantId)
+        .where('employee_id', employee.id)
+        .distinct('project_id')
+        .select('project_id');
+      const allocIds = assignedProjectIds.map(a => a.project_id);
+      qb = qb.where(builder => {
+        builder.where('projects.project_manager_id', employee.id);
+        if (allocIds.length > 0) {
+          builder.orWhereIn('projects.id', allocIds);
+        }
+      });
+    }
   }
 
   if (search) {

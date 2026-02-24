@@ -6,7 +6,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
  * GET /api/v1/timesheets
  */
 export const list = asyncHandler(async (req, res) => {
-  const result = await timesheetService.listTimesheets(req.tenantId, req.query);
+  const result = await timesheetService.listTimesheets(req.tenantId, req.query, req.user);
   res.json({ success: true, ...result });
 });
 

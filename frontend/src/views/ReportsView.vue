@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">Reports</h1>
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Laporan</h1>
 
     <!-- Report Selector -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -17,33 +17,33 @@
 
     <!-- Report Parameters -->
     <div class="card mb-6">
-      <h3 class="text-sm font-semibold text-gray-700 mb-3">Parameters</h3>
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">Parameter</h3>
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <label class="form-label">Start Date</label>
+          <label class="form-label">Dari Tanggal</label>
           <input v-model="params.start_date" type="date" class="form-input" />
         </div>
         <div>
-          <label class="form-label">End Date</label>
+          <label class="form-label">Sampai Tanggal</label>
           <input v-model="params.end_date" type="date" class="form-input" />
         </div>
         <div v-if="selectedReport === 'project'">
-          <label class="form-label">Project</label>
+          <label class="form-label">Proyek</label>
           <select v-model="params.project_id" class="form-input">
-            <option value="">All</option>
+            <option value="">Semua</option>
             <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>
         </div>
         <div v-if="selectedReport === 'employee'">
-          <label class="form-label">Employee</label>
+          <label class="form-label">Pegawai</label>
           <select v-model="params.employee_id" class="form-input">
-            <option value="">All</option>
+            <option value="">Semua</option>
             <option v-for="e in employees" :key="e.id" :value="e.id">{{ e.name }}</option>
           </select>
         </div>
         <div class="flex items-end">
           <button @click="generateReport" class="btn-primary w-full" :disabled="generating">
-            {{ generating ? 'Generating...' : 'Generate Report' }}
+            {{ generating ? 'Membuat...' : 'Buat Laporan' }}
           </button>
         </div>
       </div>
@@ -55,7 +55,7 @@
         <h3 class="text-lg font-semibold">
           {{ reportTypes.find(r => r.key === selectedReport)?.title }}
         </h3>
-        <button @click="exportCSV" class="btn-secondary text-sm">Export CSV</button>
+        <button @click="exportCSV" class="btn-secondary text-sm">Ekspor CSV</button>
       </div>
 
       <!-- Utilization Report -->
@@ -64,11 +64,11 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Employee</th>
-                <th>Department</th>
-                <th>Capacity (h)</th>
-                <th>Actual (h)</th>
-                <th>Utilization %</th>
+                <th>Pegawai</th>
+                <th>Departemen</th>
+                <th>Kapasitas (j)</th>
+                <th>Aktual (j)</th>
+                <th>Utilisasi %</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -88,7 +88,7 @@
                 </td>
                 <td>
                   <span :class="row.utilization > 110 ? 'badge-danger' : row.utilization < 60 ? 'badge-warning' : 'badge-success'">
-                    {{ row.utilization > 110 ? 'Overloaded' : row.utilization < 60 ? 'Underutilized' : 'Optimal' }}
+                    {{ row.utilization > 110 ? 'Overload' : row.utilization < 60 ? 'Kurang' : 'Optimal' }}
                   </span>
                 </td>
               </tr>
@@ -103,13 +103,13 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Project</th>
-                <th>Budget (h)</th>
-                <th>Actual (h)</th>
+                <th>Proyek</th>
+                <th>Anggaran (j)</th>
+                <th>Aktual (j)</th>
                 <th>Burn %</th>
-                <th>Budget ($)</th>
-                <th>Actual Cost ($)</th>
-                <th>Variance ($)</th>
+                <th>Anggaran (Rp)</th>
+                <th>Biaya Aktual (Rp)</th>
+                <th>Varians (Rp)</th>
               </tr>
             </thead>
             <tbody>
@@ -139,12 +139,12 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Employee</th>
-                <th>Total Hours</th>
-                <th>Billable Hours</th>
-                <th>Projects</th>
-                <th>Avg Hours/Day</th>
-                <th>Total Cost</th>
+                <th>Pegawai</th>
+                <th>Total Jam</th>
+                <th>Jam Billable</th>
+                <th>Proyek</th>
+                <th>Rata-rata Jam/Hari</th>
+                <th>Total Biaya</th>
               </tr>
             </thead>
             <tbody>
@@ -162,7 +162,7 @@
       </template>
 
       <p v-if="reportData && reportData.length === 0" class="text-center py-8 text-gray-400">
-        No data for the selected parameters.
+        Tidak ada data untuk parameter yang dipilih.
       </p>
     </div>
   </div>
@@ -187,9 +187,9 @@ const params = reactive({
 });
 
 const reportTypes = [
-  { key: 'utilization', title: 'Utilization Report', description: 'Employee utilization rates across the period.' },
-  { key: 'project', title: 'Project Burn Report', description: 'Budget vs actual hours and costs per project.' },
-  { key: 'employee', title: 'Employee Productivity', description: 'Hours breakdown per employee with cost analysis.' },
+  { key: 'utilization', title: 'Laporan Utilisasi', description: 'Tingkat utilisasi pegawai selama periode.' },
+  { key: 'project', title: 'Laporan Burn Rate Proyek', description: 'Perbandingan anggaran vs aktual jam dan biaya per proyek.' },
+  { key: 'employee', title: 'Produktivitas Pegawai', description: 'Rincian jam per pegawai dengan analisis biaya.' },
 ];
 
 function formatMoney(v) { return v ? parseFloat(v).toLocaleString() : '0'; }
@@ -205,27 +205,38 @@ async function generateReport() {
   reportData.value = null;
   try {
     let url;
-    const qs = `start_date=${params.start_date}&end_date=${params.end_date}`;
+    const qs = `period_start=${params.start_date}&period_end=${params.end_date}`;
     if (selectedReport.value === 'utilization') {
       url = `/dashboard/utilization?${qs}`;
     } else if (selectedReport.value === 'project') {
-      url = `/dashboard/project-burn-rates?${qs}`;
+      url = `/dashboard/projects`;
     } else {
-      url = `/dashboard/company?${qs}`;
+      // Employee productivity — use utilization data which has per-employee hours
+      url = `/dashboard/utilization?${qs}`;
     }
     const res = await api.get(url);
     const data = res.data.data;
 
     if (selectedReport.value === 'utilization') {
-      reportData.value = data.employees || data || [];
+      reportData.value = Array.isArray(data) ? data : (data.employees || []);
     } else if (selectedReport.value === 'project') {
-      reportData.value = data.projects || data || [];
+      reportData.value = Array.isArray(data) ? data : (data.projects || []);
     } else {
-      reportData.value = data.employees || data || [];
+      // Map utilization data to employee productivity format
+      const utilData = Array.isArray(data) ? data : (data.employees || []);
+      reportData.value = utilData.map(u => ({
+        employee_id: u.employeeId,
+        employee_name: u.name,
+        total_hours: u.actualHours,
+        billable_hours: u.actualHours, // All logged hours treated as billable
+        project_count: '-',
+        avg_hours_per_day: u.capacityHours > 0 ? (u.actualHours / (u.capacityHours / 8)).toFixed(1) : 0,
+        total_cost: '-',
+      }));
     }
   } catch (err) {
-    console.error('Report generation failed', err);
-    alert('Failed to generate report');
+    console.error('Gagal membuat laporan', err);
+    alert('Gagal membuat laporan');
   } finally {
     generating.value = false;
   }
@@ -252,7 +263,7 @@ async function loadLookups() {
   try {
     const [pRes, eRes] = await Promise.all([
       api.get('/projects?limit=100'),
-      api.get('/employees?limit=100'),
+      api.get('/employees/list-simple'),
     ]);
     projects.value = pRes.data.data || [];
     employees.value = eRes.data.data || [];

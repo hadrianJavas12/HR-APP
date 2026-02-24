@@ -1,13 +1,13 @@
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Resource Allocations</h1>
+      <h1 class="text-2xl font-bold text-gray-900">Alokasi Sumber Daya</h1>
       <button
         v-if="authStore.hasRole('super_admin', 'hr_admin', 'project_manager')"
         @click="showCreateModal = true"
         class="btn-primary"
       >
-        + Allocate Resource
+        + Alokasikan
       </button>
     </div>
 
@@ -15,33 +15,33 @@
     <div class="card mb-6">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <label class="form-label">Employee</label>
+          <label class="form-label">Pegawai</label>
           <select v-model="filters.employee_id" class="form-input" @change="loadAllocations">
-            <option value="">All Employees</option>
+            <option value="">Semua Pegawai</option>
             <option v-for="e in employees" :key="e.id" :value="e.id">{{ e.name }}</option>
           </select>
         </div>
         <div>
-          <label class="form-label">Project</label>
+          <label class="form-label">Proyek</label>
           <select v-model="filters.project_id" class="form-input" @change="loadAllocations">
-            <option value="">All Projects</option>
+            <option value="">Semua Proyek</option>
             <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>
         </div>
         <div>
           <label class="form-label">Status</label>
           <select v-model="filters.status" class="form-input" @change="loadAllocations">
-            <option value="">All</option>
-            <option value="active">Active</option>
-            <option value="planned">Planned</option>
-            <option value="completed">Completed</option>
+            <option value="">Semua</option>
+            <option value="active">Aktif</option>
+            <option value="planned">Direncanakan</option>
+            <option value="completed">Selesai</option>
           </select>
         </div>
         <div>
-          <label class="form-label">Sort</label>
+          <label class="form-label">Urutkan</label>
           <select v-model="filters.sortBy" class="form-input" @change="loadAllocations">
-            <option value="start_date">Start Date</option>
-            <option value="allocation_percentage">Allocation %</option>
+            <option value="start_date">Tanggal Mulai</option>
+            <option value="allocation_percentage">Alokasi %</option>
           </select>
         </div>
       </div>
@@ -49,7 +49,7 @@
 
     <!-- Table -->
     <div class="card">
-      <div v-if="loading" class="text-center py-8 text-gray-500">Loading...</div>
+      <div v-if="loading" class="text-center py-8 text-gray-500">Memuat...</div>
       <div v-else>
         <div class="table-container">
           <table class="data-table">
@@ -86,8 +86,8 @@
                 </td>
                 <td>
                   <div class="flex space-x-2 text-sm">
-                    <button @click="editAllocation(alloc)" class="text-primary-600 hover:underline">Edit</button>
-                    <button @click="deleteAllocation(alloc)" class="text-red-600 hover:underline">Delete</button>
+                    <button @click="editAllocation(alloc)" class="text-primary-600 hover:underline">Ubah</button>
+                    <button @click="deleteAllocation(alloc)" class="text-red-600 hover:underline">Hapus</button>
                   </div>
                 </td>
               </tr>
@@ -96,7 +96,7 @@
         </div>
 
         <div class="flex items-center justify-between mt-4">
-          <p class="text-sm text-gray-500">{{ allocations.length }} allocations</p>
+          <p class="text-sm text-gray-500">{{ allocations.length }} alokasi</p>
         </div>
       </div>
     </div>
@@ -104,20 +104,20 @@
     <!-- Create/Edit Modal -->
     <div v-if="showCreateModal || showEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
-        <h2 class="text-lg font-bold mb-4">{{ showEditModal ? 'Edit Allocation' : 'Allocate Resource' }}</h2>
+        <h2 class="text-lg font-bold mb-4">{{ showEditModal ? 'Edit Alokasi' : 'Alokasikan Sumber Daya' }}</h2>
         <form @submit.prevent="handleSave" class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="form-label">Employee *</label>
+              <label class="form-label">Pegawai *</label>
               <select v-model="form.employee_id" class="form-input" required>
-                <option value="" disabled>Select</option>
+                <option value="" disabled>Pilih</option>
                 <option v-for="e in employees" :key="e.id" :value="e.id">{{ e.name }}</option>
               </select>
             </div>
             <div>
-              <label class="form-label">Project *</label>
+              <label class="form-label">Proyek *</label>
               <select v-model="form.project_id" class="form-input" required>
-                <option value="" disabled>Select</option>
+                <option value="" disabled>Pilih</option>
                 <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
               </select>
             </div>
@@ -143,14 +143,14 @@
           </div>
 
           <div v-if="capacityWarning" class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
-            ⚠ This employee will be allocated over 100% capacity in the overlapping period.
+            ⚠ Pegawai ini akan dialokasikan lebih dari 100% kapasitas di periode yang tumpang tindih.
           </div>
 
           <div v-if="formError" class="text-sm text-red-500">{{ formError }}</div>
 
           <div class="flex justify-end space-x-3 pt-2">
-            <button type="button" @click="closeModal" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="saving">{{ saving ? 'Saving...' : 'Save' }}</button>
+            <button type="button" @click="closeModal" class="btn-secondary">Batal</button>
+            <button type="submit" class="btn-primary" :disabled="saving">{{ saving ? 'Menyimpan...' : 'Simpan' }}</button>
           </div>
         </form>
       </div>
@@ -206,7 +206,7 @@ async function loadAllocations() {
 async function loadLookups() {
   try {
     const [eRes, pRes] = await Promise.all([
-      api.get('/employees?limit=100'),
+      api.get('/employees/list-simple'),
       api.get('/projects?limit=100'),
     ]);
     employees.value = eRes.data.data || [];

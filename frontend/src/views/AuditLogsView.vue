@@ -1,14 +1,14 @@
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">Audit Logs</h1>
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Log Audit</h1>
 
     <!-- Filters -->
     <div class="card mb-6">
       <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
-          <label class="form-label">Action</label>
+          <label class="form-label">Aksi</label>
           <select v-model="filters.action" class="form-input" @change="loadLogs">
-            <option value="">All</option>
+            <option value="">Semua</option>
             <option value="login">Login</option>
             <option value="create">Create</option>
             <option value="update">Update</option>
@@ -18,9 +18,9 @@
           </select>
         </div>
         <div>
-          <label class="form-label">Entity</label>
+          <label class="form-label">Entitas</label>
           <select v-model="filters.entity_type" class="form-input" @change="loadLogs">
-            <option value="">All</option>
+            <option value="">Semua</option>
             <option value="user">User</option>
             <option value="employee">Employee</option>
             <option value="project">Project</option>
@@ -29,11 +29,11 @@
           </select>
         </div>
         <div>
-          <label class="form-label">Start Date</label>
+          <label class="form-label">Dari Tanggal</label>
           <input v-model="filters.start_date" type="date" class="form-input" @change="loadLogs" />
         </div>
         <div>
-          <label class="form-label">End Date</label>
+          <label class="form-label">Sampai Tanggal</label>
           <input v-model="filters.end_date" type="date" class="form-input" @change="loadLogs" />
         </div>
         <div>
@@ -45,18 +45,18 @@
 
     <!-- Log Table -->
     <div class="card">
-      <div v-if="loading" class="text-center py-8 text-gray-500">Loading...</div>
+      <div v-if="loading" class="text-center py-8 text-gray-500">Memuat...</div>
       <div v-else>
         <div class="table-container">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Timestamp</th>
-                <th>User</th>
-                <th>Action</th>
-                <th>Entity</th>
-                <th>Entity ID</th>
-                <th>Details</th>
+                <th>Waktu</th>
+                <th>Pengguna</th>
+                <th>Aksi</th>
+                <th>Entitas</th>
+                <th>ID Entitas</th>
+                <th>Detail</th>
               </tr>
             </thead>
             <tbody>
@@ -84,10 +84,10 @@
         </div>
 
         <div class="flex items-center justify-between mt-4">
-          <p class="text-sm text-gray-500">{{ pagination.total }} log entries</p>
+          <p class="text-sm text-gray-500">{{ pagination.total }} entri log</p>
           <div class="flex space-x-2">
-            <button @click="prevPage" :disabled="pagination.page <= 1" class="btn-secondary text-sm">← Prev</button>
-            <button @click="nextPage" :disabled="pagination.page >= pagination.totalPages" class="btn-secondary text-sm">Next →</button>
+            <button @click="prevPage" :disabled="pagination.page <= 1" class="btn-secondary text-sm">← Sebelumnya</button>
+            <button @click="nextPage" :disabled="pagination.page >= pagination.totalPages" class="btn-secondary text-sm">Selanjutnya →</button>
           </div>
         </div>
       </div>
@@ -97,16 +97,16 @@
     <div v-if="detailLog" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 max-h-[80vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-bold">Change Details</h3>
+          <h3 class="text-lg font-bold">Detail Perubahan</h3>
           <button @click="detailLog = null" class="text-gray-400 hover:text-gray-600">&times;</button>
         </div>
         <div class="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <h4 class="font-semibold text-red-600 mb-2">Old Values</h4>
+            <h4 class="font-semibold text-red-600 mb-2">Nilai Lama</h4>
             <pre class="bg-red-50 p-3 rounded-lg text-xs overflow-auto max-h-60">{{ formatJson(detailLog.old_values) }}</pre>
           </div>
           <div>
-            <h4 class="font-semibold text-green-600 mb-2">New Values</h4>
+            <h4 class="font-semibold text-green-600 mb-2">Nilai Baru</h4>
             <pre class="bg-green-50 p-3 rounded-lg text-xs overflow-auto max-h-60">{{ formatJson(detailLog.new_values) }}</pre>
           </div>
         </div>

@@ -22,6 +22,20 @@ export const getMyEmployee = asyncHandler(async (req, res) => {
 });
 
 /**
+ * GET /api/v1/employees/list-simple — lightweight list (id, name, position, department) for dropdowns.
+ * Accessible by admin/HR/PM.
+ */
+export const listSimple = asyncHandler(async (req, res) => {
+  const employees = await Employee.query()
+    .where('tenant_id', req.tenantId)
+    .where('status', 'active')
+    .select('id', 'name', 'position', 'department')
+    .orderBy('name', 'asc')
+    .limit(200);
+  res.json({ success: true, data: employees });
+});
+
+/**
  * GET /api/v1/employees/:id
  */
 export const getById = asyncHandler(async (req, res) => {
