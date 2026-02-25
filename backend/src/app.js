@@ -21,23 +21,38 @@ export function createApp() {
     app.set('trust proxy', true);
   }
 
-  // ── Security ────────────────────────────────
-  app.use(helmet());
-
-  // CORS: allow frontend origin + API own origin
+  // ── CORS (must run BEFORE helmet) ──────────
+  // Allow frontend origin + API own origin
   const allowedOrigins = [config.frontendUrl, config.appUrl].filter(Boolean);
-  app.use(cors({
+  logger.info(`CORS allowed origins: ${JSON.stringify(allowedOrigins)}`);
+
+  const corsOptions = {
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. curl, mobile apps)
+      // Allow requests with no origin (e.g. curl, mobile apps, same-origin)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        logger.warn(`CORS blocked origin: ${origin}`);
         callback(null, false);
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['X-Request-Id'],
+    maxAge: 86400, // Cache preflight for 24h
+  };
+
+  // Handle preflight (OPTIONS) explicitly for all routes
+  app.options('*', cors(corsOptions));
+  app.use(cors(corsOptions));
+
+  // ── Security ────────────────────────────────
+  app.use(helmet({
+    // Disable policies that conflict with cross-origin API access
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false,
   }));
 
   // ── Rate limiting ──────────────────────────
