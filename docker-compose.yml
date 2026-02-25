@@ -2,7 +2,6 @@
 # HR Man-Hour Performance Monitoring System
 # Docker Compose for TrueNAS / Development / Production
 # ============================================================
-version: '3.8'
 
 services:
   # ── PostgreSQL ───────────────────────────────────
@@ -67,6 +66,7 @@ services:
       JWT_REFRESH_EXPIRES_IN: 7d
       SMTP_HOST: mailhog
       SMTP_PORT: 1025
+      APP_URL: http://localhost:3000
       FRONTEND_URL: http://localhost:8080
     ports:
       - "3000:3000"
@@ -86,6 +86,8 @@ services:
     build:
       context: ./frontend
       target: production
+      args:
+        VITE_MODE: development
     container_name: hr-frontend
     restart: unless-stopped
     ports:

@@ -4,17 +4,21 @@ WORKDIR /app
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
 
-# Copy package files
-COPY package.json ./
+# Copy package files (lock file too if it exists)
+COPY package.json package-lock.json* ./
 
-# Install dependencies
-RUN npm install --production=false
+# Install dependencies (use npm ci if lock file present, else npm install)
+RUN if [ -f package-lock.json ]; then \
+      npm ci --production=false; \
+    else \
+      npm install --production=false; \
+    fi
 
 # Copy source code
 COPY src/ ./src/
 
 # Verify entry point exists
-RUN ls -la src/index.js
+RUN ls -la src/index.js && node -e "console.log('Node', process.version, 'OK')"
 
 # ── Development ──────────────────────────────────
 FROM base AS development
@@ -28,6 +32,12 @@ CMD ["dumb-init", "npx", "nodemon", "src/index.js"]
 FROM base AS production
 ENV NODE_ENV=production
 RUN npm prune --production
+# Verify critical production dependencies exist
+RUN node -e "import('express').then(() => console.log('express OK'))" && \
+    node -e "import('knex').then(() => console.log('knex OK'))" && \
+    node -e "import('pg').then(() => console.log('pg OK'))" && \
+    node -e "import('ioredis').then(() => console.log('ioredis OK'))" && \
+    node -e "import('bullmq').then(() => console.log('bullmq OK'))"
 EXPOSE 3000
 USER node
 CMD ["dumb-init", "node", "src/index.js"]

@@ -7,45 +7,84 @@ import { initSocketIO } from './socket/index.js';
 import { initWorkers, scheduleRecurringJobs } from './jobs/index.js';
 import logger from './utils/logger.js';
 
-async function start() {
-  try {
-    // Initialize database
-    const db = initDatabase();
-    logger.info('Database initialized');
-
-    // Auto-run migrations
+/**
+ * Wait for the database to be ready and run migrations.
+ * Retries up to maxRetries times with exponential backoff.
+ */
+async function waitForDatabase(db, maxRetries = 10) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      await db.migrate.latest();
-      logger.info('Database migrations completed');
-    } catch (migrationErr) {
-      logger.error({ err: migrationErr }, 'Migration failed');
-      throw migrationErr;
+      // Test raw connection first
+      await db.raw('SELECT 1');
+      logger.info(`Database connection verified (attempt ${attempt})`);
+
+      // Run migrations
+      const [batchNo, migrationList] = await db.migrate.latest();
+      if (migrationList.length > 0) {
+        logger.info({ batch: batchNo, migrations: migrationList }, 'Database migrations completed');
+      } else {
+        logger.info('Database already up to date');
+      }
+      return;
+    } catch (err) {
+      const delay = Math.min(attempt * 2000, 15000);
+      logger.warn(
+        { err: err.message, attempt, maxRetries, retryInMs: delay },
+        `Database not ready, retrying in ${delay / 1000}s...`,
+      );
+      if (attempt === maxRetries) {
+        throw new Error(`Database failed after ${maxRetries} attempts: ${err.message}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
+  }
+}
 
-    // Initialize Redis
+async function start() {
+  logger.info('='.repeat(60));
+  logger.info(`Starting ${config.appName} [${config.env}]`);
+  logger.info(`Node.js ${process.version} | PID ${process.pid}`);
+  logger.info(`Working directory: ${process.cwd()}`);
+  logger.info('='.repeat(60));
+
+  try {
+    // ── Step 1: Database ─────────────────────────
+    logger.info('Initializing database...');
+    const db = initDatabase();
+
+    await waitForDatabase(db);
+
+    // ── Step 2: Redis ────────────────────────────
+    logger.info('Initializing Redis...');
     initRedis();
-    logger.info('Redis initialized');
 
-    // Create Express app
+    // ── Step 3: Express app ──────────────────────
+    logger.info('Creating Express app...');
     const app = createApp();
-
-    // Create HTTP server
     const server = http.createServer(app);
 
-    // Initialize Socket.IO
+    // ── Step 4: Socket.IO ────────────────────────
+    logger.info('Initializing Socket.IO...');
     initSocketIO(server);
 
-    // Initialize background workers
-    initWorkers();
-    await scheduleRecurringJobs();
+    // ── Step 5: Background workers (non-fatal) ──
+    logger.info('Initializing background workers...');
+    try {
+      initWorkers();
+      await scheduleRecurringJobs();
+    } catch (workerErr) {
+      logger.warn({ err: workerErr.message }, 'Background workers failed to initialize (non-fatal)');
+    }
 
-    // Start listening
+    // ── Step 6: Start listening ──────────────────
     server.listen(config.port, '0.0.0.0', () => {
+      logger.info('='.repeat(60));
       logger.info(`🚀 ${config.appName} running on port ${config.port} [${config.env}]`);
-      logger.info(`📖 API docs: ${config.appUrl}/api/v1/health`);
+      logger.info(`📖 Health: ${config.appUrl}/api/v1/health`);
+      logger.info('='.repeat(60));
     });
 
-    // ── Graceful shutdown ──────────────────────
+    // ── Graceful shutdown ────────────────────────
     const gracefulShutdown = async (signal) => {
       logger.info(`${signal} received. Starting graceful shutdown...`);
 
@@ -79,7 +118,9 @@ async function start() {
       process.exit(1);
     });
   } catch (error) {
-    logger.error({ error }, 'Failed to start server');
+    logger.error('='.repeat(60));
+    logger.error({ err: error, stack: error?.stack }, 'FATAL: Failed to start server');
+    logger.error('='.repeat(60));
     process.exit(1);
   }
 }

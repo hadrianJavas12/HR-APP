@@ -100,6 +100,8 @@ services:
     build:
       context: ./frontend
       target: production
+      args:
+        VITE_MODE: production
     container_name: hr-frontend
     restart: unless-stopped
     ports:
