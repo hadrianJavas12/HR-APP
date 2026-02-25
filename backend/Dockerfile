@@ -10,12 +10,17 @@ COPY package.json ./
 # Install dependencies
 RUN npm install --production=false
 
-# Copy source
-COPY . .
+# Copy source code
+COPY src/ ./src/
+
+# Verify entry point exists
+RUN ls -la src/index.js
 
 # ── Development ──────────────────────────────────
 FROM base AS development
 ENV NODE_ENV=development
+# Copy remaining files for dev (eslint, jest, etc.)
+COPY . .
 EXPOSE 3000
 CMD ["dumb-init", "npx", "nodemon", "src/index.js"]
 
