@@ -22,11 +22,7 @@
           <label class="form-label">Departemen</label>
           <select v-model="filters.department" class="form-input" @change="loadEmployees">
             <option value="">Semua</option>
-            <option value="Engineering">Engineering</option>
-            <option value="Design">Design</option>
-            <option value="QA">QA</option>
-            <option value="HR">HR</option>
-            <option value="Finance">Finance</option>
+            <option v-for="dept in departments" :key="dept" :value="dept">{{ dept }}</option>
           </select>
         </div>
         <div>
@@ -210,7 +206,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useEmployeeStore } from '@/stores/employees.js';
 import { useAuthStore } from '@/stores/auth.js';
 import api from '@/services/api.js';
@@ -230,6 +226,13 @@ const filters = reactive({
   department: '',
   status: '',
   sortBy: 'name',
+});
+
+const departments = computed(() => {
+  if (!store.employees || !store.employees.length) return [];
+  const depts = [...new Set(store.employees.map(e => e.department).filter(Boolean))];
+  depts.sort((a, b) => a.localeCompare(b));
+  return depts;
 });
 
 const form = reactive({
