@@ -8,6 +8,64 @@ import { initWorkers, scheduleRecurringJobs } from './jobs/index.js';
 import logger from './utils/logger.js';
 
 /**
+ * Auto-create employee records for users that don't have one.
+ * This ensures users who registered before the auto-create fix
+ * still appear in the employee list.
+ */
+async function backfillOrphanedUsers(db) {
+  try {
+    const orphanedUsers = await db('users')
+      .leftJoin('employees', 'users.id', 'employees.user_id')
+      .whereNull('employees.id')
+      .where('users.is_active', true)
+      .select('users.id', 'users.tenant_id', 'users.name', 'users.email');
+
+    if (orphanedUsers.length === 0) return;
+
+    logger.info(`Found ${orphanedUsers.length} user(s) without employee records, backfilling...`);
+
+    for (const user of orphanedUsers) {
+      // Find the next employee code for this tenant
+      const lastEmp = await db('employees')
+        .where('tenant_id', user.tenant_id)
+        .whereNotNull('employee_code')
+        .where('employee_code', 'like', 'EMP%')
+        .orderBy('employee_code', 'desc')
+        .first();
+
+      let nextNum = 1;
+      if (lastEmp && lastEmp.employee_code) {
+        const match = lastEmp.employee_code.match(/EMP(\d+)/);
+        if (match) nextNum = parseInt(match[1], 10) + 1;
+      }
+      const employeeCode = `EMP${String(nextNum).padStart(3, '0')}`;
+
+      await db('employees').insert({
+        id: db.raw('uuid_generate_v4()'),
+        tenant_id: user.tenant_id,
+        user_id: user.id,
+        employee_code: employeeCode,
+        name: user.name,
+        email: user.email,
+        department: 'Unassigned',
+        position: 'New Employee',
+        cost_per_hour: 0,
+        capacity_per_week: 40,
+        seniority_level: 'mid',
+        status: 'active',
+        joined_at: new Date().toISOString().split('T')[0],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      logger.info({ userId: user.id, email: user.email, employeeCode }, 'Backfilled employee record');
+    }
+  } catch (err) {
+    logger.warn({ err: err.message }, 'Employee backfill failed (non-fatal)');
+  }
+}
+
+/**
  * Wait for the database to be ready and run migrations.
  * Retries up to maxRetries times with exponential backoff.
  */
@@ -53,6 +111,9 @@ async function start() {
     const db = initDatabase();
 
     await waitForDatabase(db);
+
+    // ── Step 1b: Backfill missing employee records ──
+    await backfillOrphanedUsers(db);
 
     // ── Step 2: Redis ────────────────────────────
     logger.info('Initializing Redis...');

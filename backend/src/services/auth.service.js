@@ -148,6 +148,8 @@ export async function getProfile(userId) {
 export async function register(name, email, password, ipAddress) {
   // Find default tenant
   const { Tenant } = await import('../models/Tenant.js');
+  const { Employee } = await import('../models/Employee.js');
+
   let tenant = await Tenant.query().where('status', 'active').first();
   if (!tenant) {
     throw new NotFoundError('No active tenant available. Contact administrator.');
@@ -173,6 +175,44 @@ export async function register(name, email, password, ipAddress) {
     role: 'employee',
     is_active: true,
   });
+
+  // ── Auto-create linked Employee record ──────
+  try {
+    // Generate next employee code (EMP001, EMP002, ...)
+    const lastEmployee = await Employee.query()
+      .where('tenant_id', tenant.id)
+      .whereNotNull('employee_code')
+      .where('employee_code', 'like', 'EMP%')
+      .orderBy('employee_code', 'desc')
+      .first();
+
+    let nextNum = 1;
+    if (lastEmployee && lastEmployee.employee_code) {
+      const match = lastEmployee.employee_code.match(/EMP(\d+)/);
+      if (match) nextNum = parseInt(match[1], 10) + 1;
+    }
+    const employeeCode = `EMP${String(nextNum).padStart(3, '0')}`;
+
+    await Employee.query().insert({
+      tenant_id: tenant.id,
+      user_id: user.id,
+      employee_code: employeeCode,
+      name,
+      email,
+      department: 'Unassigned',
+      position: 'New Employee',
+      cost_per_hour: 0,
+      capacity_per_week: 40,
+      seniority_level: 'junior',
+      status: 'active',
+      joined_at: new Date().toISOString().split('T')[0],
+    });
+
+    logger.info({ userId: user.id, email, employeeCode }, 'Employee record auto-created');
+  } catch (empErr) {
+    // Non-fatal — user is already created, employee can be linked manually
+    logger.warn({ userId: user.id, email, error: empErr.message }, 'Failed to auto-create employee record');
+  }
 
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
